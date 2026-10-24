@@ -16,7 +16,7 @@ export function MonthSwitcher({
   const step = "flex size-11 items-center justify-center rounded-full text-ink-2 transition active:scale-90 active:bg-surface-2 disabled:opacity-30";
 
   return (
-    <div className="flex items-center justify-between rounded-full border border-line bg-surface p-1 shadow-card">
+    <div className="flex items-center justify-between rounded-full bg-surface p-1">
       <button
         type="button"
         aria-label="Previous month"

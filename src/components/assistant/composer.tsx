@@ -153,7 +153,7 @@ export function Composer({
 
       <form
         onSubmit={submit}
-        className="flex items-end gap-1 rounded-[1.75rem] border border-line-strong bg-surface-2 p-1.5 pl-1.5 shadow-pop"
+        className="flex items-end gap-1 rounded-[1.75rem] bg-surface-2 p-1.5 pl-1.5 shadow-pop ring-1 ring-line"
       >
         <button
           type="button"

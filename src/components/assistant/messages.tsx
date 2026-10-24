@@ -97,8 +97,8 @@ export function TextBubble({ text, notice = false }: { text: string; notice?: bo
   return (
     <>
       <div
-        className={`max-w-[92%] select-text break-words rounded-[1.25rem] rounded-tl-md border px-4 py-3 text-base leading-snug ${
-          notice ? "border-dashed border-line-strong text-ink-2" : "border-line bg-surface shadow-card"
+        className={`max-w-[92%] select-text break-words rounded-[1.25rem] rounded-tl-md px-4 py-3 text-base leading-snug ${
+          notice ? "bg-surface-2 text-ink-2" : "bg-surface"
         }`}
       >
         {notice ? <p className="whitespace-pre-wrap">{text}</p> : <RichText text={text} />}
@@ -316,7 +316,7 @@ export function WorkingRow({ phrase }: { phrase: string }) {
       <Avatar pulse mood={phrase === READING_PHRASE ? "reading" : "thinking"} />
       <p
         role="status"
-        className="flex items-center gap-2.5 rounded-[1.25rem] rounded-tl-md border border-line bg-surface-2 px-4 py-2.5 text-[0.95rem] font-medium"
+        className="flex items-center gap-2.5 rounded-[1.25rem] rounded-tl-md bg-surface-2 px-4 py-2.5 text-[0.95rem] font-medium"
       >
         <span className="assistant-shimmer">{phrase}</span>
         <span aria-hidden="true" className="flex items-center gap-1">

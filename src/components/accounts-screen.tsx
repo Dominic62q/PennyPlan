@@ -1,6 +1,8 @@
 "use client";
 
 import { Archive, ArchiveRestore, Plus, Wallet } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { QueryState } from "@/components/query-state";
 import { Button } from "@/components/ui/button";
@@ -19,13 +21,22 @@ import {
   type AccountType,
   type AccountWithBalance,
 } from "@/lib/ledger/types";
-import { DEFAULT_CURRENCY, parseMoney } from "@/lib/money";
+import { DEFAULT_CURRENCY, formatMoney, parseMoney } from "@/lib/money";
+import { useBalanceHidden } from "@/lib/privacy";
 import { inputClass } from "@/lib/ui";
 
+const MASK = "••••••";
+
 export function AccountsScreen() {
+  const router = useRouter();
+  const params = useSearchParams();
   const query = useAccounts();
   const run = useLedgerAction();
-  const [adding, setAdding] = useState(false);
+  const hidden = useBalanceHidden();
+  // The "new account" sheet lives in the address (?new=1), so the Home shortcut
+  // opens it directly and the phone's Back button closes it.
+  const adding = params.get("new") === "1";
+  const closeAdd = () => router.replace("/accounts");
   const [editing, setEditing] = useState<AccountWithBalance | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -33,15 +44,27 @@ export function AccountsScreen() {
   const active = all.filter((a) => !a.archivedAt);
   const archived = all.filter((a) => a.archivedAt);
 
+  // Every open account added together, one line per currency.
+  const totals = new Map<string, number>();
+  for (const a of active) totals.set(a.currency, (totals.get(a.currency) ?? 0) + a.balance);
+  const [primary, ...others] = [...totals.entries()];
+  // The bar shows each account's share of the main currency's money.
+  const share = active.filter((a) => a.currency === primary?.[0] && a.balance > 0);
+  const shareTotal = share.reduce((sum, a) => sum + a.balance, 0);
+
   return (
     <>
       <PageHeader
         title="Accounts"
         subtitle="Where your money lives"
+        back="/"
         action={
-          <Button size="sm" icon={<Plus size={18} />} onClick={() => setAdding(true)}>
-            New
-          </Button>
+          <Link
+            href="/accounts?new=1"
+            className="flex min-h-11 items-center gap-1.5 rounded-full bg-gold px-5 text-sm font-bold text-on-gold shadow-[0_6px_20px_-6px_var(--glow)] transition active:scale-95"
+          >
+            <Plus size={18} strokeWidth={2.6} /> New
+          </Link>
         }
       />
 
@@ -56,41 +79,92 @@ export function AccountsScreen() {
             title="No accounts yet"
             text="Add cash, a bank account or mobile money to start tracking."
             action={
-              <Button full size="lg" icon={<Plus size={20} />} onClick={() => setAdding(true)}>
-                Add an account
-              </Button>
+              <Link
+                href="/accounts?new=1"
+                className="flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-gold font-semibold text-on-gold"
+              >
+                <Plus size={20} /> Add an account
+              </Link>
             }
           />
         ) : (
-          <ul className="flex flex-col gap-3">
-            {active.map((a, i) => (
-              <li
-                key={a.id}
-                className="enter"
-                style={{ "--i": i } as React.CSSProperties}
-              >
-                <button
-                  type="button"
-                  onClick={() => setEditing(a)}
-                  className="flex w-full items-center gap-4 rounded-3xl border border-line bg-surface p-4 text-left shadow-card transition active:scale-[0.99]"
+          <>
+            <section aria-label="Total balance" className="enter flex flex-col gap-3">
+              <p className="text-sm font-medium text-ink-2">
+                Total across {active.length} {active.length === 1 ? "account" : "accounts"}
+              </p>
+              {hidden ? (
+                <p className="text-5xl font-semibold leading-none tracking-tighter text-ink-3">
+                  {MASK}
+                </p>
+              ) : (
+                <Money minor={primary[1]} currency={primary[0]} size="hero" animated />
+              )}
+              {others.map(([c, total]) => (
+                <p key={c} className="text-sm text-ink-2">
+                  + {hidden ? MASK : formatMoney(total, c)} in {c}
+                </p>
+              ))}
+              {shareTotal > 0 && share.length > 1 && (
+                <div
+                  role="img"
+                  aria-label="Share of your money in each account"
+                  className="mt-1 flex h-2.5 gap-1 overflow-hidden rounded-full"
                 >
-                  <IconTile
-                    icon={ACCOUNT_ICONS[a.type]}
-                    color={ACCOUNT_COLORS[a.type]}
-                    size="lg"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold">{a.name}</span>
-                    <span className="block text-sm text-ink-2">
-                      {ACCOUNT_TYPE_LABELS[a.type]} · {a.transactionCount}{" "}
-                      {a.transactionCount === 1 ? "entry" : "entries"}
+                  {share.map((a) => (
+                    <span
+                      key={a.id}
+                      className="h-full min-w-1 rounded-full"
+                      style={{
+                        width: `${(a.balance / shareTotal) * 100}%`,
+                        background: ACCOUNT_COLORS[a.type],
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <ul
+              className="enter overflow-hidden rounded-[1.75rem] bg-surface"
+              style={{ "--i": 1 } as React.CSSProperties}
+            >
+              {active.map((a) => (
+                <li key={a.id} className="border-b border-line last:border-b-0">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(a)}
+                    className="flex min-h-[5rem] w-full items-center gap-4 px-4 py-3 text-left transition active:bg-surface-2"
+                  >
+                    <IconTile
+                      icon={ACCOUNT_ICONS[a.type]}
+                      color={ACCOUNT_COLORS[a.type]}
+                      size="lg"
+                      tinted
+                    />
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 truncate text-[1.05rem] font-semibold">
+                          {a.name}
+                        </span>
+                        <span className="shrink-0 whitespace-nowrap">
+                          {hidden ? (
+                            <span className="text-lg font-semibold text-ink-3">{MASK}</span>
+                          ) : (
+                            <Money minor={a.balance} currency={a.currency} size="lg" />
+                          )}
+                        </span>
+                      </span>
+                      <span className="truncate text-sm text-ink-2">
+                        {ACCOUNT_TYPE_LABELS[a.type]} · {a.transactionCount}{" "}
+                        {a.transactionCount === 1 ? "entry" : "entries"}
+                      </span>
                     </span>
-                  </span>
-                  <Money minor={a.balance} currency={a.currency} size="lg" />
-                </button>
-              </li>
-            ))}
-          </ul>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
         {archived.length > 0 && (
@@ -105,11 +179,11 @@ export function AccountsScreen() {
               {showArchived ? "Hide" : "Show"} archived ({archived.length})
             </button>
             {showArchived && (
-              <ul className="mt-2 flex flex-col gap-3">
+              <ul className="mt-2 flex flex-col gap-2">
                 {archived.map((a) => (
                   <li
                     key={a.id}
-                    className="flex items-center gap-3 rounded-3xl border border-line bg-surface p-4 opacity-80"
+                    className="flex items-center gap-3 rounded-[1.5rem] bg-surface p-3 pl-4 opacity-80"
                   >
                     <IconTile icon={ACCOUNT_ICONS[a.type]} color="#868e96" />
                     <span className="min-w-0 flex-1 truncate font-semibold">{a.name}</span>
@@ -131,11 +205,11 @@ export function AccountsScreen() {
         )}
       </QueryState>
 
-      <Sheet open={adding} onClose={() => setAdding(false)} title="New account">
+      <Sheet open={adding} onClose={closeAdd} title="New account">
         <NewAccountForm
           onCreate={async (input) => {
             const ok = await run(() => addAccount(input), "Account added");
-            if (ok) setAdding(false);
+            if (ok) closeAdd();
             return ok;
           }}
         />
@@ -184,7 +258,7 @@ function EditAccountForm({
         setBusy(false);
       }}
     >
-      <div className="flex items-center gap-4 rounded-3xl bg-surface-2 p-4">
+      <div className="flex items-center gap-4 rounded-[1.75rem] bg-surface-2 p-4">
         <IconTile icon={ACCOUNT_ICONS[account.type]} color={ACCOUNT_COLORS[account.type]} size="lg" />
         <div className="min-w-0">
           <p className="text-sm text-ink-2">{ACCOUNT_TYPE_LABELS[account.type]}</p>
@@ -277,7 +351,7 @@ function NewAccountForm({
                 type="button"
                 aria-pressed={active}
                 onClick={() => setType(t)}
-                className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-1 py-3 transition active:scale-95 ${
+                className={`flex flex-col items-center gap-1.5 rounded-[1.5rem] border-2 px-1 py-3 transition active:scale-95 ${
                   active ? "border-gold bg-gold/10" : "border-transparent bg-surface-2"
                 }`}
               >
@@ -312,7 +386,7 @@ function NewAccountForm({
         />
       </label>
       {error && (
-        <p role="alert" className="rounded-2xl bg-expense-soft px-4 py-3 text-sm font-medium text-expense">
+        <p role="alert" className="rounded-[1.25rem] bg-expense-soft px-4 py-3 text-sm font-medium text-expense">
           {error}
         </p>
       )}

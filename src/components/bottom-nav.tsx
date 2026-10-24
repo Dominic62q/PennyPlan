@@ -37,7 +37,7 @@ export function BottomNav() {
       aria-label="Main"
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
     >
-      <ul className="pointer-events-auto mx-auto grid h-[4.25rem] max-w-md grid-cols-5 items-center rounded-[1.75rem] border border-line bg-[var(--nav-bg)] px-1 shadow-pop backdrop-blur-xl">
+      <ul className="pointer-events-auto mx-auto grid h-[4.25rem] max-w-md grid-cols-5 items-center rounded-full bg-[var(--nav-bg)] px-2 shadow-pop ring-1 ring-line backdrop-blur-xl">
         {ITEMS.map((item) => {
           const active = item.match(pathname);
           const Icon = item.icon;
@@ -48,7 +48,7 @@ export function BottomNav() {
                 <Link
                   href={item.href}
                   aria-label="Add entry"
-                  className="-mt-7 flex size-16 items-center justify-center rounded-full bg-gold text-on-gold shadow-[0_10px_28px_-6px_rgb(244_197_66/0.7)] ring-[6px] ring-[var(--bg)] transition active:scale-90"
+                  className="-mt-7 flex size-16 items-center justify-center rounded-full bg-gold text-on-gold shadow-[0_10px_28px_-6px_var(--glow)] ring-[6px] ring-bg transition active:scale-90"
                 >
                   <Plus size={30} strokeWidth={2.6} />
                 </Link>
@@ -69,9 +69,9 @@ export function BottomNav() {
                 {item.label}
                 {active && (
                   <m.span
-                    layoutId="nav-dot"
+                    layoutId="nav-pill"
                     transition={{ type: "spring", stiffness: 500, damping: 36 }}
-                    className="absolute bottom-1.5 h-1 w-5 rounded-full bg-gold"
+                    className="absolute inset-x-0.5 inset-y-2 -z-10 rounded-full bg-surface-3"
                   />
                 )}
               </Link>

@@ -58,6 +58,7 @@ export function BillsScreen() {
       <PageHeader
         title="Bills"
         subtitle="Rent, subscriptions and pay"
+        back="/"
         action={
           hasAccount ? (
             <Button size="sm" icon={<Plus size={18} />} onClick={() => setEditing({ kind: "new" })}>
@@ -134,7 +135,7 @@ export function BillsScreen() {
             {groups.upcoming.length > 0 && (
               <section aria-label="Coming up">
                 <h2 className="mb-3 px-1 text-lg font-bold tracking-tight">Coming up</h2>
-                <ul className="enter divide-y divide-line overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
+                <ul className="enter divide-y divide-line overflow-hidden rounded-[1.75rem] bg-surface shadow-card">
                   {groups.upcoming.map((r) => (
                     <li key={r.id}>
                       <UpcomingRow rule={r} onOpen={() => setEditing({ kind: "edit", rule: r })} />
@@ -159,7 +160,7 @@ export function BillsScreen() {
                   Paused and finished ({inactive.length})
                 </button>
                 {showInactive && (
-                  <ul className="mt-2 divide-y divide-line overflow-hidden rounded-3xl border border-line bg-surface opacity-80">
+                  <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[1.75rem] bg-surface opacity-80">
                     {inactive.map((r) => (
                       <li key={r.id}>
                         <button
@@ -244,7 +245,7 @@ function MonthlyTile({
 }) {
   const Icon = tone === "income" ? ArrowDownLeft : ArrowUpRight;
   return (
-    <div className="rounded-3xl border border-line bg-surface p-4 shadow-card">
+    <div className="rounded-[1.75rem] bg-surface p-4 shadow-card">
       <p className="flex items-center gap-2 text-sm font-medium text-ink-2">
         <span
           className={`flex size-6 items-center justify-center rounded-full ${

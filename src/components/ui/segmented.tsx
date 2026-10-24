@@ -24,7 +24,7 @@ export function Segmented<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className={`relative grid rounded-2xl p-1 text-sm font-semibold ${
+      className={`relative grid rounded-full p-1 text-sm font-semibold ${
         tone === "dark" ? "bg-white/10" : "bg-surface-2"
       }`}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
@@ -38,7 +38,7 @@ export function Segmented<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(option.value)}
-            className={`relative z-10 min-h-11 rounded-xl px-3 transition-colors ${
+            className={`relative z-10 min-h-11 rounded-full px-3 transition-colors ${
               active
                 ? tone === "dark"
                   ? "text-ink"
@@ -52,8 +52,8 @@ export function Segmented<T extends string>({
               <m.span
                 layoutId={`seg-${id}`}
                 transition={{ type: "spring", stiffness: 520, damping: 38 }}
-                className={`absolute inset-0 -z-10 rounded-xl ${
-                  tone === "dark" ? "bg-white" : "bg-surface shadow-card"
+                className={`absolute inset-0 -z-10 rounded-full ${
+                  tone === "dark" ? "bg-white" : "bg-surface-3 shadow-card"
                 }`}
               />
             )}

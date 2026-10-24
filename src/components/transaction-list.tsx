@@ -30,14 +30,17 @@ const timeFormat = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
   minute: "2-digit",
 });
 
-// Newest day first, each day in its own card. Tap a row for the details sheet
-// with Edit and Delete.
+// Newest day first under a plain day heading, rows sitting straight on the page.
+// Tap a row for the details sheet with Edit and Delete.
 export function TransactionList({
   transactions,
   empty,
+  grouped = true,
 }: {
   transactions: LedgerTransaction[];
   empty?: ReactNode;
+  // false: one plain list with the day beside each time (for short previews).
+  grouped?: boolean;
 }) {
   const accounts = useAccounts();
   const categories = useCategoryLookup();
@@ -67,81 +70,84 @@ export function TransactionList({
 
   return (
     <>
-      <div className="flex flex-col gap-5">
-        {days.map(([key, items]) => {
-          const spent = items
-            .filter((t) => t.type === "expense")
-            .reduce((sum, t) => sum + t.amount, 0);
-          return (
-            <section key={key} aria-label={dayLabel(key)}>
-              <div className="mb-2 flex items-baseline justify-between px-1">
-                <h3 className="text-sm font-semibold text-ink-2">{dayLabel(key)}</h3>
-                {spent > 0 && (
-                  <span className="text-xs tabular-nums text-ink-3">
-                    Spent {formatMoney(spent, items[0].currency)}
-                  </span>
+      <div className={grouped ? "flex flex-col gap-6" : ""}>
+        {(grouped ? days : [["", transactions] as [string, LedgerTransaction[]]]).map(
+          ([key, items]) => {
+            const spent = items
+              .filter((t) => t.type === "expense")
+              .reduce((sum, t) => sum + t.amount, 0);
+            return (
+              <section key={key || "all"} aria-label={key ? dayLabel(key) : "Recent entries"}>
+                {grouped && (
+                  <div className="mb-1 flex items-baseline justify-between px-1">
+                    <h3 className="text-sm font-semibold text-ink-2">{dayLabel(key)}</h3>
+                    {spent > 0 && (
+                      <span className="text-xs tabular-nums text-ink-3">
+                        Spent {formatMoney(spent, items[0].currency)}
+                      </span>
+                    )}
+                  </div>
                 )}
-              </div>
-              <ul className="overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
-                {items.map((t) => {
-                  const isTransfer = t.transferGroupId !== null;
-                  const amount = signedAmount(t);
-                  const category = t.categoryId ? categories.byId.get(t.categoryId) : undefined;
-                  const title = isTransfer
-                    ? t.type === "transfer_out"
-                      ? "Transfer out"
-                      : "Transfer in"
-                    : (category?.name ?? "Uncategorised");
-                  const detail = [t.payee, t.note].filter(Boolean).join(" · ");
-                  const i = Math.min(index++, 12);
-                  return (
-                    <li
-                      key={t.id}
-                      className="enter border-b border-line last:border-b-0"
-                      style={{ "--i": i } as React.CSSProperties}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => open(t)}
-                        className="flex min-h-[4.25rem] w-full items-center gap-3 px-4 py-3 text-left transition active:bg-surface-2"
-                      >
-                        {isTransfer ? (
-                          <IconTile icon={ArrowLeftRight} color="#868e96" />
-                        ) : (
-                          <CategoryBadge
-                            id={t.categoryId ?? t.id}
-                            icon={category?.icon ?? null}
-                            color={t.categoryId ? category?.color : "#868e96"}
-                          />
-                        )}
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-semibold">{title}</span>
-                          <span className="block truncate text-sm text-ink-2">
-                            {detail || accountName.get(t.accountId) || ""}
+                <ul className="-mx-2 flex flex-col">
+                  {items.map((t) => {
+                    const isTransfer = t.transferGroupId !== null;
+                    const amount = signedAmount(t);
+                    const category = t.categoryId ? categories.byId.get(t.categoryId) : undefined;
+                    const title = isTransfer
+                      ? t.type === "transfer_out"
+                        ? "Transfer out"
+                        : "Transfer in"
+                      : (category?.name ?? "Uncategorised");
+                    const detail = [t.payee, t.note].filter(Boolean).join(" · ");
+                    const i = Math.min(index++, 12);
+                    const when = timeFormat.format(new Date(t.occurredAt));
+                    return (
+                      <li key={t.id} className="enter" style={{ "--i": i } as React.CSSProperties}>
+                        <button
+                          type="button"
+                          onClick={() => open(t)}
+                          className="flex min-h-[4.5rem] w-full items-center gap-3.5 rounded-[1.5rem] px-2 py-2.5 text-left transition active:bg-surface"
+                        >
+                          {isTransfer ? (
+                            <IconTile icon={ArrowLeftRight} color="#868e96" />
+                          ) : (
+                            <CategoryBadge
+                              id={t.categoryId ?? t.id}
+                              icon={category?.icon ?? null}
+                              color={t.categoryId ? category?.color : "#868e96"}
+                            />
+                          )}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[1.02rem] font-semibold">
+                              {title}
+                            </span>
+                            <span className="block truncate text-sm text-ink-2">
+                              {detail || accountName.get(t.accountId) || ""}
+                            </span>
                           </span>
-                        </span>
-                        <span className="shrink-0 text-right">
-                          <Money
-                            minor={Math.abs(amount)}
-                            currency={t.currency}
-                            size="md"
-                            signed={false}
-                            className={
-                              isTransfer ? "text-ink-2" : amount > 0 ? "text-income" : ""
-                            }
-                          />
-                          <span className="block text-xs text-ink-3">
-                            {amount > 0 ? "In" : "Out"} · {timeFormat.format(new Date(t.occurredAt))}
+                          <span className="shrink-0 text-right">
+                            <Money
+                              minor={Math.abs(amount)}
+                              currency={t.currency}
+                              size="md"
+                              signed={!isTransfer && amount > 0}
+                              className={
+                                isTransfer ? "text-ink-2" : amount > 0 ? "text-income" : ""
+                              }
+                            />
+                            <span className="block text-xs text-ink-3">
+                              {grouped ? when : `${dayLabel(localDateKey(t.occurredAt))} · ${when}`}
+                            </span>
                           </span>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          );
-        })}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          },
+        )}
       </div>
 
       <Sheet
@@ -170,7 +176,7 @@ export function TransactionList({
                 {signedAmount(current) > 0 ? "Money in" : "Money out"}
               </p>
             </div>
-            <dl className="flex flex-col divide-y divide-line rounded-3xl border border-line">
+            <dl className="flex flex-col divide-y divide-line rounded-[1.5rem] bg-surface-2">
               {[
                 ["Account", accountName.get(current.accountId)],
                 [

@@ -23,9 +23,9 @@ export function QueryState({
     return (
       <div
         role="alert"
-        className="enter flex flex-col items-center gap-3 rounded-3xl border border-line bg-surface px-6 py-8 text-center shadow-card"
+        className="enter flex flex-col items-center gap-3 rounded-[1.75rem] bg-surface px-6 py-8 text-center shadow-card"
       >
-        <span className="flex size-12 items-center justify-center rounded-2xl bg-expense-soft text-expense">
+        <span className="flex size-12 items-center justify-center rounded-full bg-expense-soft text-expense">
           <WifiOff size={22} />
         </span>
         <div>

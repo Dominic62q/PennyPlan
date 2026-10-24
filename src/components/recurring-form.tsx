@@ -216,7 +216,7 @@ export function RecurringForm({ rule, onSave, onPause, onRemove }: Props) {
 
       <section
         aria-label="Dates"
-        className="overflow-hidden rounded-3xl border border-line bg-surface"
+        className="overflow-hidden rounded-[1.75rem] bg-surface"
       >
         <label className="flex min-h-14 items-center justify-between gap-4 border-b border-line px-4">
           <span className="text-sm font-semibold">{rule ? "Next due" : "First due"}</span>

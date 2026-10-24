@@ -125,8 +125,8 @@ export function DueCard({
 
   return (
     <div
-      className={`overflow-hidden rounded-3xl border bg-surface shadow-card ${
-        tone === "overdue" ? "border-expense/40" : "border-line"
+      className={`overflow-hidden rounded-[1.75rem] ${
+        tone === "overdue" ? "bg-expense-soft" : "bg-surface"
       }`}
     >
       <button
@@ -162,6 +162,7 @@ export function DueCard({
         <Button
           size="sm"
           variant="secondary"
+          className="whitespace-nowrap"
           disabled={busy !== null}
           onClick={() => setOther(true)}
         >

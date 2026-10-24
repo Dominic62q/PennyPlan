@@ -213,7 +213,7 @@ function ReportBody({
           style={{ "--i": 5 } as React.CSSProperties}
         >
           <h2 className="mb-3 px-1 text-lg font-bold tracking-tight">Where it went</h2>
-          <div className="rounded-3xl border border-line bg-surface p-5 shadow-card">
+          <div className="rounded-[1.75rem] bg-surface p-5 shadow-card">
             <CategoryBars
               items={report.categories.map((c) => ({
                 id: c.category_id,
@@ -315,7 +315,7 @@ function Card({
   return (
     <section
       aria-label={title}
-      className="enter rounded-3xl border border-line bg-surface p-5 shadow-card"
+      className="enter rounded-[1.75rem] bg-surface p-5 shadow-card"
       style={{ "--i": index } as React.CSSProperties}
     >
       <div className="mb-4 flex items-start justify-between gap-3">

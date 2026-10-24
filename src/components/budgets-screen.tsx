@@ -109,7 +109,7 @@ export function BudgetsScreen() {
               <button
                 type="button"
                 onClick={() => setEditing({ kind: "new" })}
-                className="enter flex items-center gap-4 rounded-3xl border border-dashed border-line-strong bg-surface p-5 text-left transition active:scale-[0.99]"
+                className="enter flex items-center gap-4 rounded-[1.75rem] bg-surface p-5 text-left transition active:scale-[0.99]"
               >
                 <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gold/20 text-gold-strong">
                   <CircleDollarSign size={24} />
@@ -126,7 +126,7 @@ export function BudgetsScreen() {
             {perCategory.length > 0 && (
               <section aria-label="Category budgets">
                 <h2 className="mb-3 px-1 text-lg font-bold tracking-tight">By category</h2>
-                <ul className="flex flex-col gap-5 rounded-3xl border border-line bg-surface p-5 shadow-card">
+                <ul className="flex flex-col gap-5 rounded-[1.75rem] bg-surface p-5 shadow-card">
                   {perCategory.map((b, i) => {
                     const c = b.categoryId ? byId.get(b.categoryId) : undefined;
                     return (
@@ -228,7 +228,7 @@ function OverallCard({
   return (
     <section
       aria-label="Overall budget"
-      className="enter rounded-3xl border border-line bg-surface p-5 shadow-card"
+      className="enter rounded-[1.75rem] bg-surface p-5 shadow-card"
       style={{ "--i": 2 } as React.CSSProperties}
     >
       <div className="flex items-center gap-5">

@@ -18,7 +18,7 @@ export function EmptyState({
     <div className="enter flex flex-col items-center gap-3 px-6 py-10 text-center">
       <div className="relative mb-2 flex size-20 items-center justify-center">
         <span className="absolute inset-0 rounded-full bg-gold/20 blur-xl" />
-        <span className="relative flex size-20 items-center justify-center rounded-[1.75rem] bg-surface text-gold-strong shadow-card ring-1 ring-line">
+        <span className="relative flex size-20 items-center justify-center rounded-full bg-surface text-gold-text">
           <Icon size={34} strokeWidth={1.8} />
         </span>
       </div>

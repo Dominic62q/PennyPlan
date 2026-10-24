@@ -45,7 +45,7 @@ function NameForm({ current, onClose }: { current: string | null; onClose: () =>
         maxLength={40}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="h-14 w-full rounded-2xl border border-line-strong bg-surface px-4 text-base text-ink outline-none transition focus:border-[var(--hero-to)] focus:ring-4 focus:ring-[var(--hero-to)]/15"
+        className="h-14 w-full rounded-full border border-transparent bg-surface-2 px-5 text-base text-ink outline-none transition focus:border-gold focus:ring-4 focus:ring-gold/20"
       />
       {error && (
         <p role="alert" className="rounded-2xl bg-expense-soft px-4 py-3 text-sm font-medium text-expense">

@@ -89,7 +89,7 @@ export function ConfirmDialog({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="min-h-12 flex-1 rounded-2xl border border-line-strong font-semibold transition active:scale-[0.98] disabled:opacity-50"
+            className="min-h-12 flex-1 rounded-full bg-surface-3 font-semibold transition active:scale-[0.98] disabled:opacity-50"
           >
             {cancelLabel}
           </button>

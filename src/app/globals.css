@@ -24,11 +24,13 @@
   --hero-ink: #f4fbf8;
   --hero-ink-2: rgb(244 251 248 / 0.82);
 
-  --gold: #f4c542;
-  --gold-strong: #b8860b;
-  /* Gold as text or a thin icon: darker on light, plain gold on dark. */
-  --gold-text: #946a00;
-  --on-gold: #1b1503;
+  /* The accent ("gold" in class names, kept so nothing had to be renamed): a
+     deep green on light, lime on Midnight. */
+  --gold: #0f7b5a;
+  --gold-strong: #0a6347;
+  --gold-text: #0f7b5a;
+  --on-gold: #ffffff;
+  --glow: rgb(15 123 90 / 0.4);
 
   --income: #0b8a5f;
   --income-soft: rgb(11 138 95 / 0.12);
@@ -64,22 +66,26 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #0f1c17;
-  --surface: #172721;
-  --surface-2: #1e3129;
-  --surface-3: #274038;
-  --line: rgb(255 255 255 / 0.09);
-  --line-strong: rgb(255 255 255 / 0.18);
+  /* Midnight: near-black canvas, surfaces separated by tone instead of borders. */
+  --bg: #080c0b;
+  --surface: #121817;
+  --surface-2: #1a2220;
+  --surface-3: #252f2c;
+  --line: rgb(255 255 255 / 0.07);
+  --line-strong: rgb(255 255 255 / 0.16);
 
-  --ink: #eef6f2;
-  --ink-2: #aec3ba;
-  --ink-3: #7f988e;
+  --ink: #f2f5f3;
+  --ink-2: #a9b6b1;
+  --ink-3: #75847e;
 
-  --hero-from: #1b8a65;
-  --hero-to: #0e5f47;
+  --hero-from: #15483b;
+  --hero-to: #0d3027;
 
-  --gold-strong: #f0b72a;
-  --gold-text: #f4c542;
+  --gold: #ddf76a;
+  --gold-strong: #cbe84c;
+  --gold-text: #ddf76a;
+  --on-gold: #0a0e0d;
+  --glow: rgb(221 247 106 / 0.35);
 
   --income: #3ddba0;
   --income-soft: rgb(61 219 160 / 0.14);
@@ -102,10 +108,10 @@
   --viz-grid: rgb(255 255 255 / 0.08);
   --viz-warn: #ffc24a;
 
-  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.05);
-  --shadow-pop: 0 16px 48px -8px rgb(0 0 0 / 0.55);
+  --shadow-card: none;
+  --shadow-pop: 0 16px 48px -8px rgb(0 0 0 / 0.7);
 
-  --nav-bg: rgb(23 39 33 / 0.86);
+  --nav-bg: rgb(18 24 23 / 0.88);
 }
 
 @theme inline {

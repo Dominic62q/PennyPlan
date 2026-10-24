@@ -89,7 +89,7 @@ function Table({ spec }: { spec: ChartSpec }) {
 export function ChartCard({ spec }: { spec: ChartSpec }) {
   const [asTable, setAsTable] = useState(false);
   return (
-    <figure className="w-full rounded-[1.25rem] border border-line bg-surface-2 p-3.5 pb-3">
+    <figure className="w-full rounded-[1.5rem] bg-surface p-4 pb-3">
       <figcaption className="mb-1 flex items-start justify-between gap-3">
         <span className="min-w-0">
           <span className="block text-[0.95rem] font-bold leading-snug">{spec.title}</span>

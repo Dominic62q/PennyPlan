@@ -73,7 +73,7 @@ export function UpdatePrompt() {
     <div className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-[95] px-3">
       <div
         role="status"
-        className="pointer-events-auto mx-auto flex max-w-md items-center gap-3 rounded-[1.4rem] border border-line bg-surface p-2.5 pl-3 shadow-pop"
+        className="pointer-events-auto mx-auto flex max-w-md items-center gap-3 rounded-full bg-surface-3 p-2 pl-5 shadow-pop"
         style={{ animation: "fade-up 0.4s ease both" }}
       >
         <Mascot size={34} animate={false} />
@@ -85,7 +85,7 @@ export function UpdatePrompt() {
           type="button"
           onClick={refresh}
           disabled={applying}
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-[var(--hero-to)] px-4 text-sm font-semibold text-white transition active:scale-95 disabled:opacity-60"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-gold px-5 text-sm font-bold text-on-gold transition active:scale-95 disabled:opacity-60"
         >
           <RefreshCw size={15} className={applying ? "animate-spin" : ""} aria-hidden="true" />
           Refresh

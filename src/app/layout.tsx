@@ -37,8 +37,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0a5f46" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e5f47" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f4ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#080c0b" },
   ],
   colorScheme: "light dark",
   viewportFit: "cover",
@@ -58,11 +58,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: LAUNCH_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col">
-        {/* Paints the area under the iPhone status bar deep green, so its white
-            text stays readable on the light theme too. */}
+        {/* Keeps the area under the iPhone status bar the page colour, so
+            scrolled content doesn't show through behind the clock. */}
         <div
           aria-hidden
-          className="pointer-events-none fixed inset-x-0 top-0 z-[90] h-[env(safe-area-inset-top)] bg-[var(--hero-to)]"
+          className="pointer-events-none fixed inset-x-0 top-0 z-[90] h-[env(safe-area-inset-top)] bg-bg"
         />
         <SerwistProvider swUrl="/serwist/sw.js">
           <Providers>{children}</Providers>

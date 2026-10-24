@@ -542,7 +542,7 @@ export function AssistantScreen() {
                   <button
                     type="button"
                     onClick={() => send(prompt)}
-                    className="flex h-full min-h-14 w-full items-center gap-2.5 rounded-[1.25rem] border border-line bg-surface px-3.5 py-2.5 text-left text-sm font-semibold leading-snug transition active:scale-[0.97]"
+                    className="flex h-full min-h-14 w-full items-center gap-2.5 rounded-[1.5rem] bg-surface px-4 py-3 text-left text-sm font-semibold leading-snug transition active:scale-[0.97]"
                   >
                     <span className="size-2 shrink-0 rounded-full bg-gold" aria-hidden="true" />
                     {prompt}
@@ -569,7 +569,7 @@ export function AssistantScreen() {
                       <button
                         type="button"
                         onClick={() => openChat(chat.id)}
-                        className="flex h-12 w-full items-center gap-3 rounded-[1.1rem] border border-line bg-surface px-3.5 text-left transition active:scale-[0.98]"
+                        className="flex h-12 w-full items-center gap-3 rounded-full bg-surface px-4 text-left transition active:scale-[0.98]"
                       >
                         <MessageSquare size={16} className="shrink-0 text-gold-text" aria-hidden="true" />
                         <span className="min-w-0 flex-1 truncate text-sm font-semibold">{chat.title}</span>

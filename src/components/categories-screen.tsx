@@ -63,6 +63,7 @@ export function CategoriesScreen() {
       <PageHeader
         title="Categories"
         subtitle="How your money is sorted"
+        back="/"
         action={
           <Button size="sm" icon={<Plus size={18} />} onClick={() => setAdding(true)}>
             New
@@ -113,7 +114,7 @@ export function CategoriesScreen() {
             {tree.map(({ parent, children }, i) => (
               <li
                 key={parent.id}
-                className="enter overflow-hidden rounded-3xl border border-line bg-surface shadow-card"
+                className="enter overflow-hidden rounded-[1.75rem] bg-surface shadow-card"
                 style={{ "--i": i } as React.CSSProperties}
               >
                 <CategoryRow category={parent} onClick={() => setEditing(parent)} />
@@ -131,7 +132,7 @@ export function CategoriesScreen() {
         )}
 
         {tree.length > 0 && suggestions.length > 0 && (
-          <section className="rounded-3xl border border-dashed border-line p-4">
+          <section className="rounded-[1.75rem] bg-surface p-4">
             <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-2">
               <Sparkles size={16} className="text-gold-text" />
               Quick add
@@ -155,7 +156,7 @@ export function CategoriesScreen() {
                       `${s.name} added`,
                     )
                   }
-                  className="flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface px-3 text-sm font-medium transition active:scale-95"
+                  className="flex min-h-11 items-center gap-2 rounded-full bg-surface px-3 text-sm font-medium transition active:scale-95"
                 >
                   <Plus size={14} className="text-ink-3" />
                   {s.name}

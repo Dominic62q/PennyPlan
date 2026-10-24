@@ -2,9 +2,9 @@ import type { LucideIcon } from "lucide-react";
 import { categoryColor, categoryIcon } from "@/lib/ledger/presentation";
 
 const SIZES = {
-  sm: { box: "size-8 rounded-lg", icon: 16 },
-  md: { box: "size-10 rounded-xl", icon: 19 },
-  lg: { box: "size-12 rounded-2xl", icon: 22 },
+  sm: { box: "size-8 rounded-full", icon: 16 },
+  md: { box: "size-11 rounded-full", icon: 19 },
+  lg: { box: "size-14 rounded-full", icon: 23 },
 } as const;
 
 // A small tile with the category's icon. Calm by default: a neutral tile and a

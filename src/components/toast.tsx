@@ -77,7 +77,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.97 }}
               transition={{ type: "spring", stiffness: 520, damping: 34 }}
-              className={`pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl py-2.5 pl-3 pr-2 text-sm font-medium shadow-pop ${
+              className={`pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-full py-2.5 pl-4 pr-2 text-sm font-medium shadow-pop ${
                 toast.tone === "error"
                   ? "bg-expense text-white"
                   : "bg-ink text-bg"
@@ -98,7 +98,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     toast.action?.run();
                     dismiss();
                   }}
-                  className="min-h-11 shrink-0 rounded-xl px-3 font-bold text-gold-strong"
+                  className="min-h-11 shrink-0 rounded-full px-3 font-bold text-gold-text"
                 >
                   {toast.action.label}
                 </button>

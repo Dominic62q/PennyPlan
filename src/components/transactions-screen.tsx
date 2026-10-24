@@ -116,10 +116,8 @@ export function TransactionsScreen() {
                 type="button"
                 aria-pressed={accountId === a.id}
                 onClick={() => setAccountId(a.id)}
-                className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-semibold transition ${
-                  accountId === a.id
-                    ? "border-transparent bg-ink text-bg"
-                    : "border-line bg-surface text-ink-2"
+                className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition active:scale-95 ${
+                  accountId === a.id ? "bg-gold text-on-gold" : "bg-surface-2 text-ink-2"
                 }`}
               >
                 {a.name}

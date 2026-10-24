@@ -25,7 +25,7 @@ function useUserEmail() {
 }
 
 function AppearanceSetting() {
-  const choice = useSyncExternalStore(subscribeTheme, readTheme, () => "light" as ThemeChoice);
+  const choice = useSyncExternalStore(subscribeTheme, readTheme, () => "dark" as ThemeChoice);
   return (
     <div>
       <p className="mb-2 px-1 text-sm font-semibold text-ink-2">Appearance</p>
@@ -81,14 +81,14 @@ export function ProfileButton() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Profile and settings"
-        className="flex size-11 items-center justify-center rounded-full bg-gold text-base font-bold text-on-gold shadow-[0_4px_14px_-4px_rgb(244_197_66/0.6)] transition active:scale-95"
+        className="flex size-11 items-center justify-center rounded-full bg-gold text-base font-bold text-on-gold shadow-[0_4px_14px_-4px_var(--glow)] transition active:scale-95"
       >
         {initial}
       </button>
 
       <Sheet open={open} onClose={() => setOpen(false)} title="Profile">
         <div className="flex flex-col gap-4 pb-2">
-          <div className="flex items-center gap-4 rounded-3xl bg-surface-2 p-4">
+          <div className="flex items-center gap-4 rounded-[1.75rem] bg-surface-2 p-4">
             <span className="flex size-14 items-center justify-center rounded-full bg-gold text-xl font-bold text-on-gold">
               {initial}
             </span>
@@ -102,7 +102,7 @@ export function ProfileButton() {
             type="button"
             disabled={!ready}
             onClick={() => setNaming(true)}
-            className="flex min-h-14 items-center gap-3 rounded-3xl border border-line px-4 text-left transition active:bg-surface-2"
+            className="flex min-h-14 items-center gap-3 rounded-[1.5rem] bg-surface-2 px-4 text-left transition active:bg-surface-3"
           >
             <span className="flex-1">
               <span className="block font-semibold">What Penny calls you</span>
@@ -111,7 +111,7 @@ export function ProfileButton() {
             <ChevronRight size={18} className="text-ink-3" />
           </button>
 
-          <ul className="overflow-hidden rounded-3xl border border-line">
+          <ul className="overflow-hidden rounded-[1.75rem] bg-surface-2">
             {links.map(({ href, label, hint, icon: Icon }) => (
               <li key={href} className="border-b border-line last:border-b-0">
                 <Link
@@ -119,7 +119,7 @@ export function ProfileButton() {
                   onClick={() => setOpen(false)}
                   className="flex min-h-16 items-center gap-3 px-4 transition active:bg-surface-2"
                 >
-                  <span className="flex size-10 items-center justify-center rounded-2xl bg-surface-2 text-ink-2">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-surface-3 text-ink-2">
                     <Icon size={20} />
                   </span>
                   <span className="flex-1">
@@ -139,7 +139,7 @@ export function ProfileButton() {
           <button
             type="button"
             onClick={() => setConfirming(true)}
-            className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-expense-soft font-semibold text-expense transition active:scale-[0.98]"
+            className="flex min-h-14 items-center justify-center gap-2 rounded-full bg-expense-soft font-semibold text-expense transition active:scale-[0.98]"
           >
             <LogOut size={18} />
             Sign out

@@ -3,16 +3,17 @@ export type ThemeChoice = "light" | "dark" | "auto";
 export const THEME_KEY = "penny-theme";
 const CHANGE_EVENT = "penny-theme-change";
 
-// Light is the default. "auto" follows the phone. This runs before first paint
-// (inline in the root layout) so there is no flash of the wrong theme.
-export const THEME_SCRIPT = `try{var c=localStorage.getItem("${THEME_KEY}");var d=c==="dark"||(c==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light"}catch(e){document.documentElement.dataset.theme="light"}`;
+// Dark (Midnight) is the default. "light" and "auto" (follows the phone) are
+// opt-in. This runs before first paint (inline in the root layout) so there is
+// no flash of the wrong theme.
+export const THEME_SCRIPT = `try{var c=localStorage.getItem("${THEME_KEY}");var d=c==="light"?false:c==="auto"?matchMedia("(prefers-color-scheme: dark)").matches:true;document.documentElement.dataset.theme=d?"dark":"light"}catch(e){document.documentElement.dataset.theme="dark"}`;
 
 export function readTheme(): ThemeChoice {
   try {
     const stored = localStorage.getItem(THEME_KEY);
-    return stored === "dark" || stored === "auto" ? stored : "light";
+    return stored === "light" || stored === "auto" ? stored : "dark";
   } catch {
-    return "light";
+    return "dark";
   }
 }
 
