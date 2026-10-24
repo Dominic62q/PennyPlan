@@ -5,6 +5,7 @@ import { LAUNCH_SCRIPT } from "@/components/launch-overlay";
 import { PersistStorage } from "@/components/persist-storage";
 import { Providers } from "@/components/providers";
 import { ThemeSync } from "@/components/theme-sync";
+import { UpdatePrompt } from "@/components/update-prompt";
 import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </SerwistProvider>
         <PersistStorage />
         <ThemeSync />
+        <UpdatePrompt />
       </body>
     </html>
   );
