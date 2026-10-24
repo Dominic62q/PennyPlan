@@ -1,0 +1,527 @@
+@import "tailwindcss";
+
+/* Penny Plan design tokens.
+   Deep green and gold come from the logo. Light mode is warm paper with a bright
+   green hero; dark mode is the same design on soft green-charcoal. Every colour a screen uses is a
+   token below, so both modes stay in step. */
+:root {
+  color-scheme: light;
+
+  --bg: #f5f4ee;
+  --surface: #ffffff;
+  --surface-2: #eeece4;
+  --surface-3: #e2dfd4;
+  --line: rgb(12 31 25 / 0.09);
+  --line-strong: rgb(12 31 25 / 0.18);
+
+  --ink: #0c1f19;
+  --ink-2: #4a5f58;
+  --ink-3: #6d8179;
+
+  /* Hero card: a bright green in both modes, lighter than the logo green. */
+  --hero-from: #148259;
+  --hero-to: #0a5f46;
+  --hero-ink: #f4fbf8;
+  --hero-ink-2: rgb(244 251 248 / 0.82);
+
+  --gold: #f4c542;
+  --gold-strong: #b8860b;
+  /* Gold as text or a thin icon: darker on light, plain gold on dark. */
+  --gold-text: #946a00;
+  --on-gold: #1b1503;
+
+  --income: #0b8a5f;
+  --income-soft: rgb(11 138 95 / 0.12);
+  --expense: #d9483f;
+  --expense-soft: rgb(217 72 63 / 0.1);
+  --warning: #b97a00;
+  --warning-soft: rgb(185 122 0 / 0.13);
+
+  /* Chart series, in a fixed order (checked with validate_palette.js). */
+  --chart-income: #0b8a5f;
+  --chart-expense: #d9483f;
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
+  --viz-5: #e87ba4;
+  --viz-6: #008300;
+  --viz-7: #6250d6;
+  --viz-8: #e34948;
+  --viz-other: #9a9a93;
+  --viz-grid: rgb(12 31 25 / 0.08);
+  --viz-warn: #b97a00;
+
+  --shadow-card: 0 1px 2px rgb(12 31 25 / 0.04), 0 8px 24px -12px rgb(12 31 25 / 0.12);
+  --shadow-pop: 0 12px 40px -8px rgb(12 31 25 / 0.28);
+
+  --nav-bg: rgb(255 255 255 / 0.86);
+}
+
+/* Dark is chosen with data-theme="dark" on <html> (set before first paint by
+   THEME_SCRIPT in lib/theme.ts). A softer green-charcoal, not near-black; the
+   assistant and charts use the same tokens as every other screen. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0f1c17;
+  --surface: #172721;
+  --surface-2: #1e3129;
+  --surface-3: #274038;
+  --line: rgb(255 255 255 / 0.09);
+  --line-strong: rgb(255 255 255 / 0.18);
+
+  --ink: #eef6f2;
+  --ink-2: #aec3ba;
+  --ink-3: #7f988e;
+
+  --hero-from: #1b8a65;
+  --hero-to: #0e5f47;
+
+  --gold-strong: #f0b72a;
+  --gold-text: #f4c542;
+
+  --income: #3ddba0;
+  --income-soft: rgb(61 219 160 / 0.14);
+  --expense: #ff8577;
+  --expense-soft: rgb(255 133 119 / 0.13);
+  --warning: #ffc24a;
+  --warning-soft: rgb(255 194 74 / 0.14);
+
+  --chart-income: #2aa88a;
+  --chart-expense: #de5a4a;
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --viz-5: #d55181;
+  --viz-6: #008300;
+  --viz-7: #9085e9;
+  --viz-8: #e66767;
+  --viz-other: #6f7a75;
+  --viz-grid: rgb(255 255 255 / 0.08);
+  --viz-warn: #ffc24a;
+
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.05);
+  --shadow-pop: 0 16px 48px -8px rgb(0 0 0 / 0.55);
+
+  --nav-bg: rgb(23 39 33 / 0.86);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-gold: var(--gold);
+  --color-gold-strong: var(--gold-strong);
+  --color-gold-text: var(--gold-text);
+  --color-on-gold: var(--on-gold);
+  --color-income: var(--income);
+  --color-income-soft: var(--income-soft);
+  --color-expense: var(--expense);
+  --color-expense-soft: var(--expense-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-chart-income: var(--chart-income);
+  --color-chart-expense: var(--chart-expense);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+}
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  /* Stops the page rubber-banding behind the installed app on iPhone. */
+  overscroll-behavior-y: none;
+}
+
+button,
+a,
+[role="tab"] {
+  touch-action: manipulation;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--on-gold);
+}
+
+/* ---- Motion ---------------------------------------------------------- */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes coin-burst {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.2);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1);
+  }
+}
+@keyframes scene-reveal {
+  from {
+    clip-path: circle(0% at 50% 82%);
+  }
+  to {
+    clip-path: circle(150% at 50% 82%);
+  }
+}
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -18px, 0);
+  }
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes coin-spin {
+  0% {
+    transform: perspective(600px) rotateY(-180deg) scale(0.6);
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    transform: perspective(600px) rotateY(0deg) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.08);
+  }
+}
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes col-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* Staggered entrance: give each item a --i index. */
+.enter {
+  animation: fade-up 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+/* While the launch splash is up, page content waits behind it. */
+html[data-launch] .enter,
+html[data-launch] .enter-fade,
+html[data-launch] .enter-pop {
+  animation-delay: calc(1.15s + var(--i, 0) * 55ms);
+}
+.enter-fade {
+  animation: fade-in 0.4s ease both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+.enter-pop {
+  animation: pop-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-3) 37%,
+    var(--surface-2) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+/* ---- Assistant ------------------------------------------------------- */
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+@keyframes halo {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+@keyframes sheen {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+@keyframes bob {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+/* Penny's face: a slow bob, a blink every few seconds, and a glint on the rim. */
+@keyframes mascot-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-6%) rotate(2deg);
+  }
+}
+@keyframes mascot-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.08);
+  }
+}
+@keyframes mascot-glint {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+@keyframes mascot-dots {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.mascot-float {
+  transform-origin: 50% 80%;
+  animation: mascot-bob 3.6s ease-in-out infinite;
+}
+.mascot-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascot-blink 4.6s ease-in-out infinite;
+}
+.mascot-glint {
+  animation: mascot-glint 3.6s ease-in-out infinite;
+}
+.mascot-dots circle {
+  animation: mascot-dots 1.2s ease-in-out infinite;
+}
+.mascot-dots circle:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.mascot-dots circle:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.assistant-shimmer {
+  background: linear-gradient(100deg, var(--ink-3) 30%, var(--ink) 50%, var(--ink-3) 70%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sheen 2.2s linear infinite;
+}
+
+/* Hide the splash until the inline script in <head> decides it is needed, so
+   a returning visitor never sees a flash of it. */
+.launch-overlay {
+  display: none;
+}
+html[data-launch] .launch-overlay {
+  display: flex;
+}
+
+/* Page content slides in when a route changes. */
+.page-enter {
+  animation: fade-up 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Hide the number-input spinners and the search clear button; they fight the
+   rounded fields. */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+/* Chart entrances. SVG shapes grow from their own edge, and lines draw themselves.
+   Reduced-motion users get the finished chart straight away (rule above). */
+@keyframes viz-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes viz-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.viz-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: viz-pop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.viz-fade {
+  animation: viz-fade 0.7s ease-out both;
+}
+.viz-up {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: col-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.viz-right {
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: bar-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.viz-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 1.1s cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+}
+@keyframes viz-sweep {
+  from {
+    stroke-dasharray: 0 1;
+  }
+}
+.viz-sweep {
+  animation: viz-sweep 0.9s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+}
