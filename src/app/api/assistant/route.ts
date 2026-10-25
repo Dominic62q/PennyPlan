@@ -167,9 +167,16 @@ export async function POST(request: Request) {
   const userName = firstName(profile?.display_name);
 
   // 4. Ask the model. The key never leaves this function.
-  let upstream: Response;
-  try {
-    upstream = await fetch(`${baseUrl()}/v1/chat/completions`, {
+  const body = JSON.stringify({
+    model: model(),
+    messages: [{ role: "system", content: systemPrompt({ ...parsed, userName }) }, ...parsed.messages],
+    temperature: 0.2,
+    max_tokens: 1_200,
+    stream: false,
+    ...(parsed.toolsEnabled ? { tools: toolDefinitions(), tool_choice: "auto" } : {}),
+  });
+  const send = () =>
+    fetch(`${baseUrl()}/v1/chat/completions`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -177,24 +184,32 @@ export async function POST(request: Request) {
         "x-opencode-session": parsed.conversationId,
         "user-agent": "penny-plan-assistant/1.0",
       },
-      body: JSON.stringify({
-        model: model(),
-        messages: [{ role: "system", content: systemPrompt({ ...parsed, userName }) }, ...parsed.messages],
-        temperature: 0.2,
-        max_tokens: 1_200,
-        stream: false,
-        ...(parsed.toolsEnabled ? { tools: toolDefinitions(), tool_choice: "auto" } : {}),
-      }),
-      signal: AbortSignal.timeout(50_000),
+      body,
+      signal: AbortSignal.timeout(40_000),
     });
+
+  let upstream: Response;
+  try {
+    upstream = await send();
+    // A busy provider often clears within a moment: one quiet retry before giving up.
+    if (upstream.status === 429) {
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      upstream = await send();
+    }
   } catch {
     console.error("assistant: upstream request failed");
     return fail(504, "Penny took too long to answer. Try again.");
   }
 
   if (!upstream.ok) {
-    // Status only: the body could echo what was sent.
-    console.error("assistant: upstream status", upstream.status);
+    // Status and the provider's error type only: the body could echo what was sent.
+    const kind = await upstream
+      .json()
+      .then((b: { error?: { type?: unknown; code?: unknown } }) =>
+        String(b?.error?.type ?? b?.error?.code ?? "").slice(0, 60),
+      )
+      .catch(() => "");
+    console.error("assistant: upstream status", upstream.status, kind);
     return fail(upstream.status === 429 ? 503 : 502, "Penny is unavailable right now. Try again shortly.");
   }
 
