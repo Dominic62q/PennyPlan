@@ -78,6 +78,8 @@ const updateBill = (id: string, patch: Record<string, unknown>, user = uid) =>
   call("select assistant_update_bill($1, $2::jsonb) as r", [id, JSON.stringify(patch)], user);
 const payBill = (id: string, amount: number | null = null, user = uid) =>
   call("select assistant_pay_bill($1, $2) as r", [id, amount], user);
+const payBillOn = (id: string, paidAt: Date, user = uid) =>
+  call("select assistant_pay_bill($1, null, $2::timestamptz) as r", [id, paidAt.toISOString()], user);
 const skipBill = (id: string, user = uid) => call("select assistant_skip_bill($1) as r", [id], user);
 const undo = (token: string, user = uid) =>
   asUser(db, user, () => db.query("select assistant_undo($1)", [token]));
@@ -292,6 +294,26 @@ describe("paying and skipping", () => {
     await payBill(pay.id);
     expect((await entries(pay.id))[0]).toMatchObject({ type: "income", amount: 500000 });
     await expect(payBill(pay.id, -5)).rejects.toThrow(/out of range/);
+  });
+
+  it("dates a late payment on the day it was made, still for the due date, and undo works", async () => {
+    const first = day(0);
+    const { id } = await createBill("Late rent", { amount: 90000, first });
+    const paidOn = new Date(Date.now() - 3 * 86_400_000);
+    const paid = await payBillOn(id, paidOn);
+
+    const [row] = await entries(id);
+    expect(new Date(row.occurred_at as Date).toISOString()).toBe(paidOn.toISOString());
+    expect(row.idempotency_key).toBe(`rec:${id}:${first}`);
+
+    await undo(paid.undo_token);
+    expect(dateOf((await bill(id)).next_due)).toBe(first);
+  });
+
+  it("refuses a payment dated in the future", async () => {
+    const { id } = await createBill("Early", { first: day(0) });
+    await expect(payBillOn(id, new Date(Date.now() + 5 * 86_400_000))).rejects.toThrow(/today or an earlier day/i);
+    expect(await entries(id)).toHaveLength(0);
   });
 
   it("refuses to pay or skip a paused, ended or archived-account bill", async () => {

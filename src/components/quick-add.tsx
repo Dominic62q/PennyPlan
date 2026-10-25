@@ -19,7 +19,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useToast } from "@/components/toast";
 import { CategoryBadge } from "@/components/ui/category-badge";
+import { DatePickerSheet } from "@/components/ui/date-picker";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { dateKeyToIso, dayLabel, localDateKey, todayKey } from "@/lib/dates";
@@ -262,6 +264,8 @@ function Form({
     existing ? minorToInput(existing.amount, existing.currency) : "",
   );
   const [accountChoice, setAccountChoice] = useState(existing?.accountId ?? "");
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
   const [toChoice, setToChoice] = useState("");
   const [categoryChoice, setCategoryChoice] = useState<string | null>(existing?.categoryId ?? null);
   const [dateKey, setDateKey] = useState(existing ? localDateKey(existing.occurredAt) : todayKey());
@@ -451,28 +455,50 @@ function Form({
   const yesterday = addDaysKey(todayKey(), -1);
   const customDate = dateKey !== todayKey() && dateKey !== yesterday;
 
-  // The account picker is one tappable line; the real <select> sits invisibly on top.
+  // The account picker is one tappable line that opens the app's own list.
   const accountPicker = account && (
-    <label className="relative flex min-h-16 items-center gap-3 rounded-[1.75rem] bg-surface px-4 shadow-card">
-      <span className="flex-1">
-        <span className="block text-xs font-medium text-ink-3">{copy.accountLabel}</span>
-        <span className="block truncate font-semibold">{account.name}</span>
-      </span>
-      <span className="text-sm text-ink-2">{formatMoney(account.balance, account.currency)}</span>
-      <ChevronDown size={18} className="shrink-0 text-ink-3" />
-      <select
-        aria-label={copy.accountLabel}
-        value={accountId}
-        onChange={(e) => setAccountChoice(e.target.value)}
-        className="absolute inset-0 size-full cursor-pointer opacity-0"
+    <>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => setAccountOpen(true)}
+        className="flex min-h-16 w-full items-center gap-3 rounded-[1.75rem] bg-surface px-4 text-left shadow-card"
       >
-        {accounts.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.name} · {formatMoney(a.balance, a.currency)}
-          </option>
-        ))}
-      </select>
-    </label>
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-medium text-ink-3">{copy.accountLabel}</span>
+          <span className="block truncate font-semibold">{account.name}</span>
+        </span>
+        <span className="text-sm text-ink-2">{formatMoney(account.balance, account.currency)}</span>
+        <ChevronDown size={18} className="shrink-0 text-ink-3" />
+      </button>
+      <Sheet open={accountOpen} onClose={() => setAccountOpen(false)} title={copy.accountLabel}>
+        <ul role="listbox" aria-label={copy.accountLabel} className="flex flex-col gap-1 pb-1">
+          {accounts.map((a) => {
+            const active = a.id === accountId;
+            return (
+              <li key={a.id} role="option" aria-selected={active}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAccountChoice(a.id);
+                    setAccountOpen(false);
+                  }}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 py-2 text-left transition active:scale-[0.99] ${
+                    active ? "bg-surface-2" : "active:bg-surface-2"
+                  }`}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{a.name}</span>
+                    <span className="block text-sm text-ink-2">{formatMoney(a.balance, a.currency)}</span>
+                  </span>
+                  {active && <Check size={18} strokeWidth={2.6} className="shrink-0 text-gold-text" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </Sheet>
+    </>
   );
 
   return (
@@ -752,21 +778,23 @@ function Form({
                   {label}
                 </button>
               ))}
-              <label
-                className={`relative flex min-h-11 items-center rounded-full px-5 text-sm font-semibold transition ${
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                onClick={() => setDateOpen(true)}
+                className={`min-h-11 rounded-full px-5 text-sm font-semibold transition ${
                   customDate ? "bg-ink text-bg" : "bg-surface text-ink-2 shadow-card"
                 }`}
               >
                 {customDate ? dayLabel(dateKey) : "Pick a date"}
-                <input
-                  type="date"
-                  aria-label="Pick a date"
-                  value={dateKey}
-                  max={todayKey()}
-                  onChange={(e) => e.target.value && setDateKey(e.target.value)}
-                  className="absolute inset-0 size-full cursor-pointer opacity-0"
-                />
-              </label>
+              </button>
+              <DatePickerSheet
+                open={dateOpen}
+                onClose={() => setDateOpen(false)}
+                value={dateKey}
+                onChange={setDateKey}
+                max={todayKey()}
+              />
             </div>
           </Section>
 

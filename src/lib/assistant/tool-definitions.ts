@@ -199,10 +199,11 @@ export const TOOLS = {
   },
   pay_bill: {
     description:
-      "Marks the bill's current due occurrence as paid (or, for income, received): records it as a transaction dated today and moves the bill to its next due date. Saved straight away with an Undo button. Pass amount only if the person paid something different from the usual amount. Get the id from list_bills. Returns the bill read back from the database.",
+      "Marks the bill's current due occurrence as paid (or, for income, received): records it as a transaction dated today (or on paid_on) and moves the bill to its next due date. Saved straight away with an Undo button. Pass amount only if the person paid something different from the usual amount, and paid_on only if it was paid or received on another day. Get the id from list_bills. Returns the bill read back from the database.",
     args: z.object({
       bill_id: z.uuid().describe("An id taken from list_bills, never guessed"),
       amount: z.number().positive().optional().describe("Only if it differs from the usual amount"),
+      paid_on: day.optional().describe("The day it was really paid or received, today or earlier; omit for today"),
     }),
   },
   skip_bill: {

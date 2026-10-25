@@ -337,11 +337,14 @@ export async function removeRecurring(id: string) {
 // Records the bill as paid (for the usual amount, or what was actually paid)
 // and moves the rule to its next date. A second tap for the same date does
 // nothing.
-export async function payRecurring(id: string, due: string, amount?: number) {
+// `paidAt` is when the money really moved, for a bill settled after its due date;
+// without it the entry is stamped with the moment of the tap.
+export async function payRecurring(id: string, due: string, amount?: number, paidAt?: string) {
   const { error } = await createClient().rpc("pay_recurring", {
     p_rule: id,
     p_due: due,
     ...(amount === undefined ? {} : { p_amount: amount }),
+    ...(paidAt === undefined ? {} : { p_paid_at: paidAt }),
   });
   check(error);
 }

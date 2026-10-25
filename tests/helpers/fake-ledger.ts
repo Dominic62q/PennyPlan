@@ -352,13 +352,17 @@ function billRpc(name: string, args: Record<string, unknown>) {
   const due = row.next_due;
   row.next_due = addDaysKey(due, 30);
   if (name === "assistant_pay_bill") {
-    paidBills.push({ bill_id: row.id, amount: args.p_amount === null ? row.amount : Number(args.p_amount) });
+    paidBills.push({
+      bill_id: row.id,
+      amount: args.p_amount === null ? row.amount : Number(args.p_amount),
+      paid_at: (args.p_paid_at as string | undefined) ?? null,
+    });
     return { data: { id: row.id, undo_token: randomUUID(), transaction_id: randomUUID(), paid_for: due }, error: null };
   }
   return { data: { id: row.id, undo_token: randomUUID(), skipped: due }, error: null };
 }
 // What pay_bill recorded, so a test can check the amount.
-export const paidBills: { bill_id: string; amount: number }[] = [];
+export const paidBills: { bill_id: string; amount: number; paid_at: string | null }[] = [];
 
 // Rows added through the assistant, so a test can see them and then put things back.
 export const addedIds: string[] = [];

@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
+import { DateField } from "@/components/ui/date-picker";
+import { SelectField } from "@/components/ui/select-field";
 import { reviewEntries } from "@/lib/assistant/review";
 import type { NewEntry, Review, ReviewRow } from "@/lib/assistant/types";
 import { todayKey } from "@/lib/dates";
@@ -107,18 +109,14 @@ export function ReviewCard({
         <p className="text-xs text-ink-2">Check it and fix anything. Nothing is saved until you tap Add.</p>
         <label className="mt-2.5 block text-xs font-medium text-ink-2">
           Account
-          <select
+          <SelectField
+            title="Account"
             value={review.accountId}
             disabled={busy}
-            onChange={(e) => changeAccount(e.target.value)}
+            onChange={changeAccount}
+            options={openAccounts.map((a) => ({ value: a.id, label: `${a.name} (${a.currency})` }))}
             className={`${field} mt-1 w-full`}
-          >
-            {openAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} ({a.currency})
-              </option>
-            ))}
-          </select>
+          />
         </label>
         {wrongCurrency && (
           <p className="mt-2 flex items-start gap-1.5 text-xs text-expense">
@@ -162,13 +160,13 @@ export function ReviewCard({
               />
             </div>
             <div className="flex items-center gap-2 pl-7">
-              <input
-                type="date"
+              <DateField
+                title="Date"
+                label="Date"
                 value={row.date}
                 max={todayKey()}
-                onChange={(e) => patch(row.id, { date: e.target.value })}
-                aria-label="Date"
-                className={`${field} flex-1 px-2`}
+                onChange={(date) => patch(row.id, { date })}
+                className={`${field} flex-1 px-2 text-left`}
               />
               <button
                 type="button"
@@ -181,21 +179,19 @@ export function ReviewCard({
               </button>
             </div>
             <div className="pl-7">
-              <select
+              <SelectField
+                title="Category"
+                label="Category"
                 value={row.categoryId ?? ""}
-                onChange={(e) => patch(row.id, { categoryId: e.target.value || null })}
-                aria-label="Category"
+                onChange={(id) => patch(row.id, { categoryId: id || null })}
+                options={[
+                  { value: "", label: "No category" },
+                  ...(categories
+                    ?.filter((c) => c.kind === row.type && (!c.archivedAt || c.id === row.categoryId))
+                    .map((c) => ({ value: c.id, label: nameOf(c.id) })) ?? []),
+                ]}
                 className={`${field} w-full`}
-              >
-                <option value="">No category</option>
-                {categories
-                  ?.filter((c) => c.kind === row.type && (!c.archivedAt || c.id === row.categoryId))
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {nameOf(c.id)}
-                    </option>
-                  ))}
-              </select>
+              />
             </div>
             {row.duplicate && (
               <p className="pl-7 text-xs font-medium text-gold-text">Looks like it&apos;s already in this account.</p>

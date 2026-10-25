@@ -13,6 +13,11 @@ import { createPortal } from "react-dom";
 
 const CLOSE_MS = 240;
 
+// Open sheets, oldest first. A picker can open on top of a form sheet, and
+// Escape should only close the one on top.
+const openSheets: symbol[] = [];
+let baseOverflow = "";
+
 // A bottom sheet: slides up, closes on backdrop tap, Escape, the X, or a drag
 // down on the handle. Content scrolls inside; the page behind is locked.
 export function Sheet({
@@ -54,18 +59,28 @@ export function Sheet({
     return () => clearTimeout(id);
   }, [open, mounted]);
 
+  // Read through a ref so a new onClose each render does not re-queue the sheet.
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!mounted) return;
-    const previous = document.body.style.overflow;
+    if (openSheets.length === 0) baseOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const me = Symbol("sheet");
+    openSheets.push(me);
+    const onKey = (e: KeyboardEvent) =>
+      e.key === "Escape" && openSheets[openSheets.length - 1] === me && closeRef.current();
     window.addEventListener("keydown", onKey);
     panel.current?.focus();
     return () => {
-      document.body.style.overflow = previous;
       window.removeEventListener("keydown", onKey);
+      openSheets.splice(openSheets.indexOf(me), 1);
+      if (openSheets.length === 0) document.body.style.overflow = baseOverflow;
     };
-  }, [mounted, onClose]);
+  }, [mounted]);
 
   const onPointerDown = useCallback((e: PointerEvent) => {
     startY.current = e.clientY;

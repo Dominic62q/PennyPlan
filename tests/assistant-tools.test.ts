@@ -68,7 +68,7 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }));
 
-import { localDateKey, todayKey } from "@/lib/dates";
+import { dateKeyToIso, dayLabel, localDateKey, todayKey } from "@/lib/dates";
 import { addDaysKey } from "@/lib/ledger/recurring";
 import { addConfirmed } from "@/lib/assistant/changes";
 import { runTool } from "@/lib/assistant/tools";
@@ -917,6 +917,18 @@ describe("bills", () => {
     expect(notes).toEqual([
       { label: "Marked Rent as paid", detail: expect.stringMatching(/1,200\.00 · Cash · next due /), undoTokens: [TOKEN] },
     ]);
+  });
+
+  it("dates a late payment on the day given, and refuses a future day", async () => {
+    const paidOn = addDaysKey(todayKey(), -3);
+    const result = await act("pay_bill", { bill_id: RENT, paid_on: paidOn });
+    expect(rpcs[0].args.p_paid_at).toBe(dateKeyToIso(paidOn));
+    expect(result.paid).toMatch(/1,200\.00$/);
+    expect(notes[0].detail).toContain(dayLabel(paidOn));
+
+    const future = await act("pay_bill", { bill_id: RENT, paid_on: addDaysKey(todayKey(), 2) });
+    expect(future.error).toMatch(/future/);
+    expect(rpcs).toHaveLength(1);
   });
 
   it("records the amount actually paid, and says received for income", async () => {

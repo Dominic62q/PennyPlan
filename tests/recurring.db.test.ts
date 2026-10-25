@@ -201,6 +201,31 @@ describe("pay_recurring and skip_recurring", () => {
     expect(Number((await recurringTx(uid))[0].amount)).toBe(21_350);
   });
 
+  it("dates a late payment on the day it was made, for the original due date", async () => {
+    const uid = await createUserWithFixtures(db);
+    const id = await addRule(uid, { due: "2026-03-15", amount: 18_000 });
+    const late = await asUser(db, uid, () =>
+      one<{ pay_recurring: string | null }>(
+        "select pay_recurring($1, $2::date, null, $3::timestamptz)",
+        [id, "2026-03-15", "2026-03-18T12:00:00Z"],
+      ),
+    );
+    expect(late.pay_recurring).toBeTruthy();
+    expect((await recurringTx(uid))[0].day).toBe("2026-03-18");
+    expect(await ruleDue(uid, id)).toBe("2026-04-15");
+  });
+
+  it("refuses a payment dated in the future", async () => {
+    const uid = await createUserWithFixtures(db);
+    const id = await addRule(uid, { due: "2026-03-15" });
+    await expect(
+      asUser(db, uid, () =>
+        one("select pay_recurring($1, $2::date, null, now() + interval '5 days')", [id, "2026-03-15"]),
+      ),
+    ).rejects.toThrow(/today or an earlier day/i);
+    expect(await ruleDue(uid, id)).toBe("2026-03-15");
+  });
+
   it("does nothing the second time for the same due date", async () => {
     const uid = await createUserWithFixtures(db);
     const id = await addRule(uid, { due: "2026-03-15" });

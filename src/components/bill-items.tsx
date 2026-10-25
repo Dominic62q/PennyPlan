@@ -4,8 +4,10 @@ import { CalendarClock, Check, Clock, Repeat, TriangleAlert } from "lucide-react
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { IconTile } from "@/components/ui/category-badge";
+import { DatePickerSheet } from "@/components/ui/date-picker";
 import { Money } from "@/components/ui/money";
 import { Sheet } from "@/components/ui/sheet";
+import { dateKeyToIso, dayLabel, localDateKey, todayKey } from "@/lib/dates";
 import { useCategoryLookup } from "@/lib/ledger/hooks";
 import { payRecurring, skipRecurring } from "@/lib/ledger/mutations";
 import { categoryColor, categoryIcon } from "@/lib/ledger/presentation";
@@ -166,7 +168,7 @@ export function DueCard({
           disabled={busy !== null}
           onClick={() => setOther(true)}
         >
-          Other amount
+          Amount or date
         </Button>
         <Button
           size="sm"
@@ -179,13 +181,13 @@ export function DueCard({
         </Button>
       </div>
 
-      <Sheet open={other} onClose={() => setOther(false)} title={income ? "Amount received" : "Amount paid"}>
+      <Sheet open={other} onClose={() => setOther(false)} title={income ? "Received" : "Paid"}>
         {other && (
           <AmountForm
             rule={rule}
-            onSubmit={async (minor) => {
+            onSubmit={async (minor, paidAt) => {
               const ok = await run(
-                () => payRecurring(rule.id, rule.nextDue, minor),
+                () => payRecurring(rule.id, rule.nextDue, minor, paidAt),
                 income ? "Marked as received" : "Marked as paid",
               );
               if (ok) setOther(false);
@@ -203,9 +205,18 @@ function AmountForm({
   onSubmit,
 }: {
   rule: RecurringRule;
-  onSubmit: (minor: number) => Promise<boolean>;
+  onSubmit: (minor: number, paidAt: string) => Promise<boolean>;
 }) {
+  const income = rule.kind === "income";
   const [amount, setAmount] = useState(minorToInput(rule.amount, rule.currency));
+  const [dateKey, setDateKey] = useState(todayKey());
+  const [picking, setPicking] = useState(false);
+  const yesterday = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return localDateKey(d);
+  })();
+  const customDate = dateKey !== todayKey() && dateKey !== yesterday;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -218,7 +229,7 @@ function AmountForm({
       return;
     }
     setBusy(true);
-    const ok = await onSubmit(minor);
+    const ok = await onSubmit(minor, dateKeyToIso(dateKey));
     setBusy(false);
     if (!ok) setError("Could not save it. Try again.");
   }
@@ -226,8 +237,8 @@ function AmountForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-5 pb-2" noValidate>
       <p className="text-sm text-ink-2">
-        {rule.name} is usually the amount below. Change it if this time was different, like a
-        bill that varies.
+        {rule.name} is usually the amount below. Change it if this time was different, and say
+        which day it {income ? "came in" : "went out"} if that was not today.
       </p>
       <label className="flex flex-col gap-2 text-sm font-semibold">
         Amount ({rule.currency})
@@ -239,13 +250,51 @@ function AmountForm({
           className={`${inputClass} text-xl font-semibold tabular-nums`}
         />
       </label>
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-semibold">{income ? "When did it arrive?" : "When did you pay it?"}</span>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: todayKey(), label: "Today" },
+            { key: yesterday, label: "Yesterday" },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={dateKey === key}
+              onClick={() => setDateKey(key)}
+              className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${
+                dateKey === key ? "bg-gold text-on-gold" : "bg-surface-2 text-ink-2"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => setPicking(true)}
+            className={`min-h-10 rounded-full px-4 text-sm font-semibold transition ${
+              customDate ? "bg-gold text-on-gold" : "bg-surface-2 text-ink-2"
+            }`}
+          >
+            {customDate ? dayLabel(dateKey) : "Pick a date"}
+          </button>
+          <DatePickerSheet
+            open={picking}
+            onClose={() => setPicking(false)}
+            value={dateKey}
+            onChange={setDateKey}
+            max={todayKey()}
+          />
+        </div>
+      </div>
       {error && (
         <p role="alert" className="rounded-2xl bg-expense-soft px-4 py-3 text-sm font-medium text-expense">
           {error}
         </p>
       )}
       <Button type="submit" size="lg" full loading={busy}>
-        {rule.kind === "income" ? "Mark as received" : "Mark as paid"}
+        {income ? "Mark as received" : "Mark as paid"}
       </Button>
     </form>
   );

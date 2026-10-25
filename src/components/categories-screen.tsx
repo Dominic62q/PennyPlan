@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CategoryBadge, IconTile } from "@/components/ui/category-badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { Segmented } from "@/components/ui/segmented";
+import { SelectField } from "@/components/ui/select-field";
 import { Sheet } from "@/components/ui/sheet";
 import { useCategories } from "@/lib/ledger/hooks";
 import {
@@ -428,18 +429,15 @@ function CategoryForm({
       {!existing && parents.length > 0 && (
         <label className="flex flex-col gap-2 text-sm font-semibold">
           Inside
-          <select
+          <SelectField
+            title="Inside"
             value={parentId}
-            onChange={(e) => setParentId(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Nothing (a main category)</option>
-            {parents.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            onChange={setParentId}
+            options={[
+              { value: "", label: "Nothing (a main category)" },
+              ...parents.map((p) => ({ value: p.id, label: p.name })),
+            ]}
+          />
         </label>
       )}
 

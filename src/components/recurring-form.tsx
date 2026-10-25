@@ -3,7 +3,9 @@
 import { Pause, Play, Trash2, X } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-picker";
 import { Segmented } from "@/components/ui/segmented";
+import { SelectField } from "@/components/ui/select-field";
 import { todayKey } from "@/lib/dates";
 import { useAccounts, useCategories } from "@/lib/ledger/hooks";
 import type { RecurringInput } from "@/lib/ledger/schemas";
@@ -60,7 +62,9 @@ export function RecurringForm({ rule, onSave, onPause, onRemove }: Props) {
   const [every, setEvery] = useState(rule?.repeatEvery ?? 1);
   const [nextDue, setNextDue] = useState(rule?.nextDue ?? todayKey());
   const [endDate, setEndDate] = useState(rule?.endDate ?? "");
-  const [autoPost, setAutoPost] = useState(rule?.autoPost ?? kind === "income");
+  // Off unless chosen: a bill or a salary often arrives after its date, and only
+  // the person knows when it really did.
+  const [autoPost, setAutoPost] = useState(rule?.autoPost ?? false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -75,7 +79,6 @@ export function RecurringForm({ rule, onSave, onPause, onRemove }: Props) {
   function chooseKind(next: CategoryKind) {
     setKind(next);
     setCategoryId("");
-    if (!rule) setAutoPost(next === "income");
   }
 
   function chooseFrequency(next: RecurringFrequency) {
@@ -159,35 +162,31 @@ export function RecurringForm({ rule, onSave, onPause, onRemove }: Props) {
 
       <label className="flex flex-col gap-2 text-sm font-semibold">
         {income ? "Paid into" : "Paid from"}
-        <select
+        <SelectField
+          title={income ? "Paid into" : "Paid from"}
           value={account?.id ?? ""}
-          onChange={(e) => setAccountId(e.target.value)}
-          className={inputClass}
-        >
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name} · {formatMoney(a.balance, a.currency)}
-            </option>
-          ))}
-        </select>
+          onChange={setAccountId}
+          options={accounts.map((a) => ({
+            value: a.id,
+            label: a.name,
+            hint: formatMoney(a.balance, a.currency),
+          }))}
+        />
       </label>
 
       <label className="flex flex-col gap-2 text-sm font-semibold">
         <span>
           Category <span className="font-normal text-ink-3">(optional)</span>
         </span>
-        <select
+        <SelectField
+          title="Category"
           value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className={inputClass}
-        >
-          <option value="">No category</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+          onChange={setCategoryId}
+          options={[
+            { value: "", label: "No category" },
+            ...categories.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
       </label>
 
       <fieldset className="flex flex-col gap-3">
@@ -199,18 +198,13 @@ export function RecurringForm({ rule, onSave, onPause, onRemove }: Props) {
           options={FREQUENCY_OPTIONS}
         />
         {everyOptions.length > 1 && (
-          <select
-            aria-label="Every"
+          <SelectField
+            label="Every"
+            title="How often"
             value={every}
-            onChange={(e) => setEvery(Number(e.target.value))}
-            className={inputClass}
-          >
-            {everyOptions.map(([n, label]) => (
-              <option key={n} value={n}>
-                {label}
-              </option>
-            ))}
-          </select>
+            onChange={setEvery}
+            options={everyOptions.map(([n, label]) => ({ value: n, label }))}
+          />
         )}
       </fieldset>
 
@@ -218,27 +212,29 @@ export function RecurringForm({ rule, onSave, onPause, onRemove }: Props) {
         aria-label="Dates"
         className="overflow-hidden rounded-[1.75rem] bg-surface"
       >
-        <label className="flex min-h-14 items-center justify-between gap-4 border-b border-line px-4">
+        <div className="flex min-h-14 items-center justify-between gap-4 border-b border-line px-4">
           <span className="text-sm font-semibold">{rule ? "Next due" : "First due"}</span>
-          <input
-            type="date"
+          <DateField
+            title={rule ? "Next due" : "First due"}
+            label={rule ? "Next due" : "First due"}
             value={nextDue}
-            onChange={(e) => e.target.value && setNextDue(e.target.value)}
-            className="min-h-11 bg-transparent text-right text-base text-ink-2 outline-none"
+            onChange={setNextDue}
+            className="min-h-11 text-right text-base text-ink-2"
           />
-        </label>
+        </div>
         <div className="flex min-h-14 items-center justify-between gap-3 px-4">
-          <label htmlFor="rule-end" className="text-sm font-semibold">
+          <span className="text-sm font-semibold">
             Ends <span className="font-normal text-ink-3">(optional)</span>
-          </label>
+          </span>
           <span className="flex items-center gap-1">
-            <input
-              id="rule-end"
-              type="date"
+            <DateField
+              title="Ends"
+              label="Ends"
+              placeholder="Never"
               value={endDate}
               min={nextDue}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="min-h-11 bg-transparent text-right text-base text-ink-2 outline-none"
+              onChange={setEndDate}
+              className="min-h-11 text-right text-base text-ink-2"
             />
             {endDate && (
               <button
@@ -257,16 +253,16 @@ export function RecurringForm({ rule, onSave, onPause, onRemove }: Props) {
       <div className="flex items-center gap-4 rounded-3xl bg-surface-2 p-4">
         <span className="min-w-0 flex-1">
           <span id="auto-label" className="block font-semibold">
-            Add it automatically
+            Record it on the due date
           </span>
           <span className="block text-sm text-ink-2">
             {autoPost
               ? pastDate
-                ? "Dates already past are filled in for you."
-                : `Recorded on the due date. Nothing to tap.`
+                ? "Dates already past are filled in, whether or not it was settled."
+                : "Added on the due date even if it has not been settled yet."
               : income
-                ? "You'll get a Received button when it's due."
-                : "You'll get a Paid button when it's due."}
+                ? "Off: you tap Received when it arrives and choose the day."
+                : "Off: you tap Paid when you pay it and choose the day."}
           </span>
         </span>
         <button

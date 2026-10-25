@@ -1202,11 +1202,13 @@ async function updateBillTool(c: Context, a: Args<"update_bill">) {
 async function payBillTool(c: Context, a: Args<"pay_bill">) {
   const bill = await existingBill(c, a.bill_id);
   const amount = a.amount === undefined ? null : toMinorIn(a.amount, bill.currency);
-  const done = allowChange(c, `bill-pay:${JSON.stringify([a.bill_id, bill.nextDue, amount])}`);
+  if (a.paid_on && a.paid_on > todayKey()) throw new ToolError("The paid-on day can't be in the future.");
+  const done = allowChange(c, `bill-pay:${JSON.stringify([a.bill_id, bill.nextDue, amount, a.paid_on ?? null])}`);
 
   const { data, error } = await createClient().rpc("assistant_pay_bill", {
     p_id: a.bill_id,
     p_amount: amount,
+    ...(a.paid_on ? { p_paid_at: dateKeyToIso(a.paid_on) } : {}),
   });
   if (error) throw new ToolError(changeMessage(error));
   done();
@@ -1219,7 +1221,7 @@ async function payBillTool(c: Context, a: Args<"pay_bill">) {
   const recorded = money(amount ?? bill.amount, bill.currency);
   c.onChange?.({
     label: `Marked ${bill.name} as ${verb}`,
-    detail: `${recorded} · ${names.account(bill.accountId)} · next due ${dayLabel(saved.nextDue)}`,
+    detail: `${recorded}${a.paid_on ? ` on ${dayLabel(a.paid_on)}` : ""} · ${names.account(bill.accountId)} · next due ${dayLabel(saved.nextDue)}`,
     ...(result.undo_token ? { undoTokens: [result.undo_token] } : {}),
   });
   return {
@@ -1227,7 +1229,7 @@ async function payBillTool(c: Context, a: Args<"pay_bill">) {
     [verb]: recorded,
     for_due_date: result.paid_for ?? bill.nextDue,
     bill: billLine(saved, names),
-    note: `It was recorded as ${bill.kind === "income" ? "income" : "an expense"} dated today and the bill moved on. The person now sees a green line with an Undo button. Confirm in one short sentence.`,
+    note: `It was recorded as ${bill.kind === "income" ? "income" : "an expense"} dated ${a.paid_on ? dayLabel(a.paid_on) : "today"} and the bill moved on. The person now sees a green line with an Undo button. Confirm in one short sentence.`,
   };
 }
 
