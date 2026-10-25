@@ -9,18 +9,19 @@ import { Money } from "@/components/ui/money";
 import { Sheet } from "@/components/ui/sheet";
 import { dayLabel, localDateKey } from "@/lib/dates";
 import { useAccounts, useCategoryLookup } from "@/lib/ledger/hooks";
+import { mergeTransfers, type ListEntry } from "@/lib/ledger/transfers";
 import { signedAmount, type LedgerTransaction } from "@/lib/ledger/types";
 import { useDeleteTransaction } from "@/lib/ledger/use-delete";
 import { DEFAULT_LOCALE, formatMoney } from "@/lib/money";
 import { buttonClass } from "@/lib/ui";
 
-function group(transactions: LedgerTransaction[]) {
-  const days = new Map<string, LedgerTransaction[]>();
-  for (const t of transactions) {
-    const key = localDateKey(t.occurredAt);
+function group(entries: ListEntry[]) {
+  const days = new Map<string, ListEntry[]>();
+  for (const e of entries) {
+    const key = localDateKey(e.tx.occurredAt);
     const list = days.get(key);
-    if (list) list.push(t);
-    else days.set(key, [t]);
+    if (list) list.push(e);
+    else days.set(key, [e]);
   }
   return [...days.entries()];
 }
@@ -45,19 +46,20 @@ export function TransactionList({
   const accounts = useAccounts();
   const categories = useCategoryLookup();
   const remove = useDeleteTransaction();
-  const [selected, setSelected] = useState<LedgerTransaction | null>(null);
+  const [selected, setSelected] = useState<ListEntry | null>(null);
   // Keep the last row around while the sheet animates out.
-  const [shown, setShown] = useState<LedgerTransaction | null>(null);
+  const [shown, setShown] = useState<ListEntry | null>(null);
 
   const accountName = useMemo(
     () => new Map((accounts.data ?? []).map((a) => [a.id, a.name])),
     [accounts.data],
   );
-  const days = useMemo(() => group(transactions), [transactions]);
+  const entries = useMemo(() => mergeTransfers(transactions), [transactions]);
+  const days = useMemo(() => group(entries), [entries]);
 
-  function open(t: LedgerTransaction) {
-    setShown(t);
-    setSelected(t);
+  function open(e: ListEntry) {
+    setShown(e);
+    setSelected(e);
   }
 
   if (transactions.length === 0) {
@@ -65,17 +67,18 @@ export function TransactionList({
   }
 
   let index = 0;
-  const current = shown;
+  const current = shown?.tx;
+  const currentTo = shown?.to ?? null;
   const currentIsTransfer = current?.transferGroupId != null;
 
   return (
     <>
       <div className={grouped ? "flex flex-col gap-6" : ""}>
-        {(grouped ? days : [["", transactions] as [string, LedgerTransaction[]]]).map(
+        {(grouped ? days : [["", entries] as [string, ListEntry[]]]).map(
           ([key, items]) => {
             const spent = items
-              .filter((t) => t.type === "expense")
-              .reduce((sum, t) => sum + t.amount, 0);
+              .filter((e) => e.tx.type === "expense")
+              .reduce((sum, e) => sum + e.tx.amount, 0);
             return (
               <section key={key || "all"} aria-label={key ? dayLabel(key) : "Recent entries"}>
                 {grouped && (
@@ -83,29 +86,35 @@ export function TransactionList({
                     <h3 className="text-sm font-semibold text-ink-2">{dayLabel(key)}</h3>
                     {spent > 0 && (
                       <span className="text-xs tabular-nums text-ink-3">
-                        Spent {formatMoney(spent, items[0].currency)}
+                        Spent {formatMoney(spent, items[0].tx.currency)}
                       </span>
                     )}
                   </div>
                 )}
                 <ul className="-mx-2 flex flex-col">
-                  {items.map((t) => {
+                  {items.map((entry) => {
+                    const t = entry.tx;
                     const isTransfer = t.transferGroupId !== null;
                     const amount = signedAmount(t);
                     const category = t.categoryId ? categories.byId.get(t.categoryId) : undefined;
                     const title = isTransfer
-                      ? t.type === "transfer_out"
-                        ? "Transfer out"
-                        : "Transfer in"
+                      ? entry.to
+                        ? "Transfer"
+                        : t.type === "transfer_out"
+                          ? "Transfer out"
+                          : "Transfer in"
                       : (category?.name ?? "Uncategorised");
-                    const detail = [t.payee, t.note].filter(Boolean).join(" · ");
+                    const route = entry.to
+                      ? `${accountName.get(t.accountId) ?? "?"} → ${accountName.get(entry.to.accountId) ?? "?"}`
+                      : null;
+                    const detail = [route, t.payee, t.note].filter(Boolean).join(" · ");
                     const i = Math.min(index++, 12);
                     const when = timeFormat.format(new Date(t.occurredAt));
                     return (
                       <li key={t.id} className="enter" style={{ "--i": i } as React.CSSProperties}>
                         <button
                           type="button"
-                          onClick={() => open(t)}
+                          onClick={() => open(entry)}
                           className="flex min-h-[4.5rem] w-full items-center gap-3.5 rounded-[1.5rem] px-2 py-2.5 text-left transition active:bg-surface"
                         >
                           {isTransfer ? (
@@ -156,9 +165,11 @@ export function TransactionList({
         title={
           current
             ? currentIsTransfer
-              ? current.type === "transfer_out"
-                ? "Transfer out"
-                : "Transfer in"
+              ? currentTo
+                ? "Transfer"
+                : current.type === "transfer_out"
+                  ? "Transfer out"
+                  : "Transfer in"
               : (categories.byId.get(current.categoryId ?? "")?.name ?? "Uncategorised")
             : ""
         }
@@ -170,15 +181,18 @@ export function TransactionList({
                 minor={current.amount}
                 currency={current.currency}
                 size="xl"
-                className={signedAmount(current) > 0 ? "text-income" : ""}
+                className={!currentTo && signedAmount(current) > 0 ? "text-income" : ""}
               />
               <p className="mt-2 text-sm text-ink-2">
-                {signedAmount(current) > 0 ? "Money in" : "Money out"}
+                {currentTo ? "Moved between accounts" : signedAmount(current) > 0 ? "Money in" : "Money out"}
               </p>
             </div>
             <dl className="flex flex-col divide-y divide-line rounded-[1.5rem] bg-surface-2">
               {[
-                ["Account", accountName.get(current.accountId)],
+                currentTo
+                  ? ["From", accountName.get(current.accountId)]
+                  : ["Account", accountName.get(current.accountId)],
+                ["To", currentTo ? accountName.get(currentTo.accountId) : undefined],
                 [
                   "Date",
                   new Intl.DateTimeFormat(DEFAULT_LOCALE, {
