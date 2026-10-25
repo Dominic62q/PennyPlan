@@ -127,10 +127,14 @@ export const TOOLS = {
   },
   update_account: {
     description:
-      "Renames, archives or restores an account. Archiving hides it from pickers but keeps all its history; it does not delete anything. Saved straight away with an Undo button. Get the id from list_accounts (include_archived to restore).",
+      "Renames an account, changes its opening balance, or archives or restores it. Archiving hides it from pickers but keeps all its history; it does not delete anything. The opening balance is what the account held before its first entry; balance = opening balance + all entries, so changing it moves the balance by the difference and adds no entry. Saved straight away with an Undo button. Get the id (and opening_balance) from list_accounts (include_archived to restore).",
     args: z.object({
       account_id: id,
       name: z.string().trim().min(1).max(60).optional().describe("The new name"),
+      opening_balance: z
+        .number()
+        .optional()
+        .describe("New opening balance in cedis (negative for money owed on a credit card or loan)"),
       archived: z.boolean().optional().describe("true to archive, false to restore"),
     }),
   },

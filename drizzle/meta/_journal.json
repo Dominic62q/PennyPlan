@@ -141,6 +141,13 @@
       "when": 1792848990728,
       "tag": "0019_assistant_transfers",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792908182676,
+      "tag": "0020_assistant_account_opening",
+      "breakpoints": true
     }
   ]
 }

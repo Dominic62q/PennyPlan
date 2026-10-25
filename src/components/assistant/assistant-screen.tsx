@@ -510,7 +510,7 @@ export function AssistantScreen() {
               type="button"
               onClick={greet}
               aria-label="Say hi to Penny"
-              className="enter-pop relative flex size-[min(10.5rem,22dvh)] shrink-0 items-center justify-center transition active:scale-95"
+              className="enter-pop relative flex size-[min(8rem,18dvh)] shrink-0 items-center justify-center transition active:scale-95"
             >
               <span
                 aria-hidden="true"
@@ -529,7 +529,7 @@ export function AssistantScreen() {
 
             <div className="relative text-center">
               <Greeting className="text-sm font-medium text-ink-2" />
-              <h1 className="mt-1.5 text-[1.75rem] font-bold leading-tight tracking-tight">
+              <h1 className="mt-1.5 text-[1.5rem] font-semibold leading-tight tracking-tight">
                 What can I do
                 <br />
                 for your money?

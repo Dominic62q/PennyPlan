@@ -2,6 +2,7 @@ import { AssistantFab } from "@/components/assistant-fab";
 import { BottomNav } from "@/components/bottom-nav";
 import { LaunchOverlay } from "@/components/launch-overlay";
 import { RecurringSync } from "@/components/recurring-sync";
+import { Tour } from "@/components/tour";
 
 // Main screens share the bottom bar and the launch splash. Quick add sits
 // outside this group so the keypad gets the whole screen.
@@ -15,6 +16,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <BottomNav />
       <LaunchOverlay />
       <RecurringSync />
+      <Tour />
     </>
   );
 }

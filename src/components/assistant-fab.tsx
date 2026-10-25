@@ -44,7 +44,7 @@ export function AssistantFab() {
   }, []);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-30 px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-30 px-4">
       <div
         className={`mx-auto flex max-w-md items-end justify-end gap-2 transition duration-300 ${
           tucked ? "translate-x-[5.5rem] opacity-0" : ""
@@ -61,7 +61,8 @@ export function AssistantFab() {
         <Link
           href="/assistant"
           aria-label="Ask Penny"
-          className="pointer-events-auto relative flex size-[3.75rem] items-center justify-center rounded-full bg-[#0b1f1a] shadow-[0_10px_26px_-6px_rgb(0_0_0/0.55)] ring-2 ring-gold/70 transition active:scale-90"
+          data-tour="penny"
+          className="pointer-events-auto relative flex size-12 items-center justify-center rounded-full bg-[#0b1f1a] shadow-[0_6px_16px_-6px_rgb(0_0_0/0.5)] ring-1 ring-gold/50 transition active:scale-90"
         >
           <Mascot size="78%" />
         </Link>

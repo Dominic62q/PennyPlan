@@ -28,8 +28,8 @@ export function PageHeader({
       )}
       <div className="flex min-h-12 items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="truncate text-[2rem] font-bold leading-tight tracking-tight">{title}</h1>
-          {subtitle && <p className="text-[0.95rem] text-ink-2">{subtitle}</p>}
+          <h1 className="truncate text-[1.6rem] font-semibold leading-tight tracking-tight">{title}</h1>
+          {subtitle && <p className="text-sm text-ink-2">{subtitle}</p>}
         </div>
         {action}
       </div>

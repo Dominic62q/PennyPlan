@@ -410,9 +410,16 @@ export const fakeSupabaseClient = {
       const rows = (name === "assistant_update_account" ? accountRows : categoryRows) as { id: string; name: string; archived_at: string | null }[];
       const row = rows.find((r) => r.id === text.p_id);
       if (!row) return { data: null, error: { code: "P0002", message: "That was not found." } };
-      const patch = args.p_patch as { name?: string; archived?: boolean };
+      const patch = args.p_patch as { name?: string; archived?: boolean; opening_balance?: number };
       if (patch.name !== undefined) row.name = patch.name;
       if (patch.archived !== undefined) row.archived_at = patch.archived ? "2026-10-23T00:00:00Z" : null;
+      if (patch.opening_balance !== undefined && name === "assistant_update_account") {
+        // The balance is the opening balance plus entries, so it moves by the difference.
+        const account = row as unknown as { opening_balance: number };
+        const balance = balanceRows.find((b) => b.account_id === text.p_id);
+        if (balance) balance.balance += patch.opening_balance - account.opening_balance;
+        account.opening_balance = patch.opening_balance;
+      }
       return { data: { id: text.p_id, undo_token: randomUUID(), active_bills: 0, open_subcategories: 0 }, error: null };
     }
     if (name === "assistant_create_category") {

@@ -5,7 +5,7 @@
 // into, large soft corners for surfaces, and no outlines (tone does the work).
 
 export const inputClass =
-  "w-full min-h-[3.25rem] rounded-full border border-transparent bg-surface-2 px-5 text-base text-ink placeholder:text-ink-3 outline-none transition focus:border-gold focus:ring-4 focus:ring-gold/20";
+  "w-full min-h-12 rounded-full border border-transparent bg-surface-2 px-4 text-base text-ink placeholder:text-ink-3 outline-none transition focus:border-gold focus:ring-4 focus:ring-gold/20";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 type ButtonSize = "md" | "lg" | "sm";
@@ -14,16 +14,16 @@ const BUTTON_BASE =
   "inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold transition duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50";
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-gold text-on-gold shadow-[0_6px_20px_-6px_var(--glow)] hover:bg-gold-strong",
+  primary: "bg-gold text-on-gold hover:bg-gold-strong",
   secondary: "bg-surface-2 text-ink hover:bg-surface-3",
   ghost: "text-ink-2 hover:bg-surface-2",
   danger: "bg-expense-soft text-expense hover:brightness-95",
 };
 
 const BUTTON_SIZES: Record<ButtonSize, string> = {
-  sm: "min-h-11 px-5 text-sm",
-  md: "min-h-12 px-6 text-base",
-  lg: "min-h-14 px-7 text-base",
+  sm: "min-h-10 px-4 text-sm",
+  md: "min-h-11 px-5 text-[0.9375rem]",
+  lg: "min-h-12 px-6 text-base",
 };
 
 export function buttonClass(

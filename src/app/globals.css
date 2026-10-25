@@ -174,6 +174,13 @@ button {
   outline-offset: 2px;
 }
 
+/* Text fields show focus on their own pill (border and ring), not a box. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
 ::selection {
   background: var(--gold);
   color: var(--on-gold);

@@ -10,7 +10,6 @@ import {
   Eye,
   EyeOff,
   Plus,
-  Sparkles,
   Target,
   Wallet,
   type LucideIcon,
@@ -78,19 +77,20 @@ function Actions({ items }: { items: Action[] }) {
   return (
     <nav
       aria-label="Quick actions"
-      className="enter flex justify-between px-2"
+      data-tour="actions"
+      className="enter flex justify-center gap-10"
       style={{ "--i": 2 } as React.CSSProperties}
     >
       {items.map(({ href, label, icon: Icon, primary, disabled }) => {
-        const circle = `flex size-[3.6rem] items-center justify-center rounded-full transition ${
+        const circle = `flex size-[3.25rem] items-center justify-center rounded-full transition ${
           primary
-            ? "bg-gold text-on-gold shadow-[0_8px_24px_-8px_var(--glow)]"
+            ? "bg-gold text-on-gold"
             : "bg-surface-2 text-ink"
         }`;
         const body = (
           <>
             <span className={circle}>
-              <Icon size={24} strokeWidth={2} />
+              <Icon size={21} strokeWidth={2} />
             </span>
             <span className="text-xs font-semibold text-ink-2">{label}</span>
           </>
@@ -172,22 +172,30 @@ export function HomeScreen() {
         {active.length === 0 ? (
           <section
             aria-label="Get started"
-            className="enter rounded-[2rem] bg-surface p-6"
+            className="enter rounded-[1.75rem] bg-surface p-5"
           >
-            <span className="flex size-14 items-center justify-center rounded-full bg-gold text-on-gold">
-              <Wallet size={26} />
+            <span className="flex size-11 items-center justify-center rounded-full bg-surface-3 text-gold-text">
+              <Wallet size={20} />
             </span>
-            <h2 className="mt-5 text-2xl font-bold tracking-tight">Start with an account</h2>
-            <p className="mt-2 text-ink-2">
+            <h2 className="mt-4 text-xl font-semibold tracking-tight">Start with an account</h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
               Add where your money lives, like cash, a bank account or mobile money. Then record
               spending and income in seconds.
             </p>
-            <Link href="/accounts?new=1" className={`${buttonClass("primary", "lg", true)} mt-6`}>
-              <Plus size={20} /> Add your first account
+            <Link
+              href="/accounts?new=1"
+              data-tour="accounts"
+              className={`${buttonClass("primary", "md", true)} mt-5`}
+            >
+              <Plus size={18} /> Add your first account
             </Link>
           </section>
         ) : (
-          <section aria-label="Total balance" className="enter flex flex-col gap-4 pt-1">
+          <section
+            aria-label="Total balance"
+            data-tour="balance"
+            className="enter flex flex-col gap-4 pt-1"
+          >
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-ink-2">Total balance</p>
               <div className="flex items-center gap-1.5">
@@ -212,7 +220,7 @@ export function HomeScreen() {
 
             <div>
               {hidden ? (
-                <p className="text-[3.4rem] font-semibold leading-none tracking-tighter text-ink-3">
+                <p className="text-[2.6rem] font-semibold leading-none tracking-tighter text-ink-3">
                   {MASK}
                 </p>
               ) : (
@@ -267,12 +275,12 @@ export function HomeScreen() {
                 icon: ArrowLeftRight,
                 disabled: active.length < 2,
               },
-              { href: "/assistant", label: "Ask Penny", icon: Sparkles },
             ]}
           />
 
           <section
             aria-label="Accounts"
+            data-tour="accounts"
             className="enter"
             style={{ "--i": 3 } as React.CSSProperties}
           >

@@ -14,6 +14,14 @@ export function minorUnitDigits(currency: string, locale = DEFAULT_LOCALE) {
   );
 }
 
+// Like parseMoney, but a leading "-" is allowed (money owed on a card or loan).
+export function parseSignedMoney(input: string, currency = DEFAULT_CURRENCY) {
+  const trimmed = input.trim();
+  const negative = trimmed.startsWith("-");
+  const minor = parseMoney(negative ? trimmed.slice(1) : trimmed, currency);
+  return minor === null ? null : negative ? -minor : minor;
+}
+
 // "1,240.50" or "45" -> minor units. Returns null for anything ambiguous.
 export function parseMoney(input: string, currency = DEFAULT_CURRENCY) {
   const digits = minorUnitDigits(currency);

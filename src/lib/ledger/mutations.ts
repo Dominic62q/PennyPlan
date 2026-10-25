@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import {
+  accountEditSchema,
   accountInputSchema,
   budgetInputSchema,
   categoryInputSchema,
@@ -9,6 +10,7 @@ import {
   transactionInputSchema,
   transactionPatchSchema,
   transferInputSchema,
+  type AccountEdit,
   type AccountInput,
   type BudgetInput,
   type CategoryInput,
@@ -165,6 +167,19 @@ export async function renameAccount(id: string, name: string) {
   const { error } = await createClient()
     .from("accounts")
     .update({ name: parsed.data })
+    .eq("id", id);
+  check(error);
+}
+
+// The name and the opening balance (what the account held before its first entry).
+// The balance shown is the opening balance plus every entry, so changing it moves
+// the balance by the difference without adding an entry.
+export async function updateAccountDetails(id: string, input: AccountEdit) {
+  const parsed = accountEditSchema.safeParse(input);
+  if (!parsed.success) throw firstIssue(parsed.error);
+  const { error } = await createClient()
+    .from("accounts")
+    .update({ name: parsed.data.name, opening_balance: parsed.data.openingBalance })
     .eq("id", id);
   check(error);
 }

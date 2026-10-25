@@ -9,7 +9,7 @@ import {
   subscribeInstallPrompt,
 } from "@/lib/pwa/install-prompt";
 
-export type InstallMode = "none" | "prompt" | "ios";
+export type InstallMode = "none" | "prompt" | "ios" | "android";
 
 function getMode(): InstallMode {
   const isStandalone =
@@ -25,7 +25,11 @@ function getMode(): InstallMode {
   const isIos =
     /iPad|iPhone|iPod/.test(ua) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  return isIos ? "ios" : "none";
+  if (isIos) return "ios";
+
+  // Android before Chrome has offered the prompt (or in a browser that never
+  // does): point to the browser menu so the way in is always visible.
+  return /Android/.test(ua) ? "android" : "none";
 }
 
 export function useInstallMode() {
@@ -39,13 +43,13 @@ export function InstallCard() {
   if (mode === "none") return null;
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-[var(--hero-from)] to-[var(--hero-to)] p-5 text-[var(--hero-ink)]">
+    <div data-tour="install" className="rounded-3xl bg-gradient-to-br from-[var(--hero-from)] to-[var(--hero-to)] p-5 text-[var(--hero-ink)]">
       <div className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-2xl bg-gold text-on-gold">
           <Download size={20} />
         </span>
         <h3 className="text-base font-semibold">
-          {mode === "prompt" ? "Install Penny Plan" : "Install on your iPhone"}
+          {mode === "ios" ? "Install on your iPhone" : "Install Penny Plan"}
         </h3>
       </div>
       {mode === "prompt" ? (
@@ -56,6 +60,26 @@ export function InstallCard() {
           <Button className="mt-4" full onClick={() => void promptInstall()}>
             Install
           </Button>
+        </>
+      ) : mode === "android" ? (
+        <>
+          <ol className="mt-3 flex flex-col gap-2 text-sm text-[var(--hero-ink-2)]">
+            <li className="flex items-center gap-2">
+              <span className="font-semibold text-gold">1</span>
+              Open your browser menu <b className="text-white">⋮</b>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="font-semibold text-gold">2</span>
+              Choose <b className="text-white">Install app</b> or <b className="text-white">Add to Home screen</b>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="font-semibold text-gold">3</span>
+              Open Penny Plan from your home screen
+            </li>
+          </ol>
+          <p className="mt-3 text-xs text-[var(--hero-ink-2)]">
+            Installing keeps your data safer offline and is needed for reminders.
+          </p>
         </>
       ) : (
         <>

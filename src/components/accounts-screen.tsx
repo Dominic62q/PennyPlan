@@ -12,7 +12,7 @@ import { Money } from "@/components/ui/money";
 import { PageHeader } from "@/components/ui/page-header";
 import { Sheet } from "@/components/ui/sheet";
 import { useAccounts } from "@/lib/ledger/hooks";
-import { addAccount, renameAccount, setAccountArchived } from "@/lib/ledger/mutations";
+import { addAccount, setAccountArchived, updateAccountDetails } from "@/lib/ledger/mutations";
 import { ACCOUNT_COLORS, ACCOUNT_ICONS } from "@/lib/ledger/presentation";
 import { useLedgerAction } from "@/lib/ledger/use-action";
 import {
@@ -21,7 +21,12 @@ import {
   type AccountType,
   type AccountWithBalance,
 } from "@/lib/ledger/types";
-import { DEFAULT_CURRENCY, formatMoney, parseMoney } from "@/lib/money";
+import {
+  DEFAULT_CURRENCY,
+  formatMoney,
+  minorToInput,
+  parseSignedMoney,
+} from "@/lib/money";
 import { useBalanceHidden } from "@/lib/privacy";
 import { inputClass } from "@/lib/ui";
 
@@ -61,7 +66,7 @@ export function AccountsScreen() {
         action={
           <Link
             href="/accounts?new=1"
-            className="flex min-h-11 items-center gap-1.5 rounded-full bg-gold px-5 text-sm font-bold text-on-gold shadow-[0_6px_20px_-6px_var(--glow)] transition active:scale-95"
+            className="flex min-h-10 items-center gap-1.5 rounded-full bg-gold px-4 text-sm font-semibold text-on-gold transition active:scale-95"
           >
             <Plus size={18} strokeWidth={2.6} /> New
           </Link>
@@ -220,8 +225,10 @@ export function AccountsScreen() {
           <EditAccountForm
             key={editing.id}
             account={editing}
-            onRename={async (name) => {
-              if (await run(() => renameAccount(editing.id, name), "Renamed")) setEditing(null);
+            onSave={async (input) => {
+              const ok = await run(() => updateAccountDetails(editing.id, input), "Account updated");
+              if (ok) setEditing(null);
+              return ok;
             }}
             onArchive={async () => {
               if (await run(() => setAccountArchived(editing.id, true), "Account archived")) {
@@ -237,31 +244,44 @@ export function AccountsScreen() {
 
 function EditAccountForm({
   account,
-  onRename,
+  onSave,
   onArchive,
 }: {
   account: AccountWithBalance;
-  onRename: (name: string) => Promise<void>;
+  onSave: (input: { name: string; openingBalance: number }) => Promise<boolean>;
   onArchive: () => Promise<void>;
 }) {
   const [name, setName] = useState(account.name);
+  const [opening, setOpening] = useState(minorToInput(account.openingBalance, account.currency));
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const changed = name.trim() !== account.name && name.trim() !== "";
+
+  const openingMinor = parseSignedMoney(opening, account.currency);
+  // What the balance becomes: the entries stay, only the starting point moves.
+  const nextBalance =
+    openingMinor === null ? null : account.balance - account.openingBalance + openingMinor;
+  const nameChanged = name.trim() !== account.name && name.trim() !== "";
+  const openingChanged = openingMinor !== null && openingMinor !== account.openingBalance;
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    if (openingMinor === null) {
+      setError("Enter the opening balance like 250 or 250.50, or -120 for money owed.");
+      return;
+    }
+    setBusy(true);
+    const ok = await onSave({ name, openingBalance: openingMinor });
+    setBusy(false);
+    if (!ok) setError("Could not save. Check the name isn't already used by another account.");
+  }
 
   return (
-    <form
-      className="flex flex-col gap-4 pb-2"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setBusy(true);
-        await onRename(name);
-        setBusy(false);
-      }}
-    >
+    <form className="flex flex-col gap-5 pb-2" onSubmit={submit} noValidate>
       <div className="flex items-center gap-4 rounded-[1.75rem] bg-surface-2 p-4">
         <IconTile icon={ACCOUNT_ICONS[account.type]} color={ACCOUNT_COLORS[account.type]} size="lg" />
         <div className="min-w-0">
-          <p className="text-sm text-ink-2">{ACCOUNT_TYPE_LABELS[account.type]}</p>
+          <p className="text-sm text-ink-2">{ACCOUNT_TYPE_LABELS[account.type]} · balance now</p>
           <Money minor={account.balance} currency={account.currency} size="lg" />
         </div>
       </div>
@@ -275,8 +295,34 @@ function EditAccountForm({
           className={inputClass}
         />
       </label>
-      <Button type="submit" size="lg" full loading={busy} disabled={!changed}>
-        Save name
+      <div className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2 text-sm font-semibold">
+          Opening balance ({account.currency})
+          <input
+            inputMode="decimal"
+            value={opening}
+            autoComplete="off"
+            onChange={(e) => setOpening(e.target.value)}
+            className={inputClass}
+          />
+        </label>
+        <p className="px-1 text-xs text-ink-3">
+          What this account held before your first entry. Changing it moves the balance by the same
+          amount, and no entry is added.
+        </p>
+        {openingChanged && nextBalance !== null && (
+          <p className="px-1 text-sm font-medium text-ink-2">
+            Balance will be {formatMoney(nextBalance, account.currency)}
+          </p>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="rounded-[1.25rem] bg-expense-soft px-4 py-3 text-sm font-medium text-expense">
+          {error}
+        </p>
+      )}
+      <Button type="submit" size="lg" full loading={busy} disabled={!nameChanged && !openingChanged}>
+        Save changes
       </Button>
       <Button
         variant="danger"
@@ -317,13 +363,12 @@ function NewAccountForm({
 
     let openingBalance = 0;
     if (opening.trim() !== "") {
-      const negative = opening.trim().startsWith("-");
-      const parsed = parseMoney(opening.trim().replace(/^-/, ""));
+      const parsed = parseSignedMoney(opening);
       if (parsed === null) {
         setError("Enter the starting balance like 250 or 250.50");
         return;
       }
-      openingBalance = negative ? -parsed : parsed;
+      openingBalance = parsed;
     }
 
     setBusy(true);

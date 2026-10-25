@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { WELCOME_KEY } from "@/components/launch-overlay";
+import { queueTour } from "@/lib/tour";
 import { Logo } from "@/components/ui/logo";
 import { Mascot } from "@/components/ui/mascot";
 import { Spinner } from "@/components/ui/spinner";
@@ -117,7 +118,7 @@ function Welcome({ onPick }: { onPick: (mode: Mode) => void }) {
         </div>
 
         <div style={{ animation: "fade-up 0.6s ease 0.4s both" }}>
-          <h1 className="text-[2rem] font-bold leading-[1.1] tracking-tight">
+          <h1 className="text-[1.75rem] font-bold leading-[1.1] tracking-tight">
             Know where every pesewa goes.
           </h1>
           <p className="mt-3 text-base text-white/70">
@@ -185,6 +186,8 @@ export function LoginForm() {
     } catch {
       // Without storage the home screen just skips the welcome splash.
     }
+    // Only a brand-new account gets the guided tour of the app.
+    if (registering) queueTour();
     // Let the celebration play, then hand over to the splash that looks the same.
     setLeaving(true);
     router.prefetch("/");
@@ -281,7 +284,7 @@ export function LoginForm() {
             </header>
 
             <div key={mode} className="mt-8" style={{ animation: "fade-up 0.45s ease both" }}>
-              <h1 className="text-[2rem] font-bold leading-tight tracking-tight">
+              <h1 className="text-[1.75rem] font-bold leading-tight tracking-tight">
                 {registering ? "Create your account" : "Welcome back"}
               </h1>
               <p className="mt-2 text-base text-ink-2">

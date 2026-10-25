@@ -86,6 +86,13 @@ export const accountInputSchema = z.object({
 });
 export type AccountInput = z.input<typeof accountInputSchema>;
 
+// What the Edit account sheet can change.
+export const accountEditSchema = z.object({
+  name: nameSchema,
+  openingBalance: accountInputSchema.shape.openingBalance,
+});
+export type AccountEdit = z.input<typeof accountEditSchema>;
+
 export const categoryInputSchema = z.object({
   id: uuid,
   name: nameSchema,

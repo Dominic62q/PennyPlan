@@ -103,7 +103,15 @@ const tx = (o: Record<string, unknown>) => ({
 describe("lookups", () => {
   it("lists live accounts with formatted balances", async () => {
     const { accounts } = await run("list_accounts");
-    expect(accounts).toEqual([{ id: CASH, name: "Cash", type: "Cash", balance: expect.stringMatching(/500\.00$/) }]);
+    expect(accounts).toEqual([
+      {
+        id: CASH,
+        name: "Cash",
+        type: "Cash",
+        opening_balance: expect.stringMatching(/100\.00$/),
+        balance: expect.stringMatching(/500\.00$/),
+      },
+    ]);
   });
 
   it("lists categories, naming parents and filtering by kind", async () => {
@@ -552,8 +560,9 @@ describe("accounts and categories", () => {
       if (name === "assistant_update_account" || name === "assistant_update_category") {
         const table = name === "assistant_update_account" ? tables.accounts : tables.categories;
         const row = (table as Record<string, unknown>[]).find((a) => a.id === args.p_id)!;
-        const patch = args.p_patch as { name?: string; archived?: boolean };
+        const patch = args.p_patch as { name?: string; archived?: boolean; opening_balance?: number };
         if (patch.name !== undefined) row.name = patch.name;
+        if (patch.opening_balance !== undefined) row.opening_balance = patch.opening_balance;
         if (patch.archived !== undefined) row.archived_at = patch.archived ? "2026-10-23" : null;
         return { id: args.p_id, undo_token: TOKEN, ...extra };
       }
@@ -617,6 +626,28 @@ describe("accounts and categories", () => {
     expect(archived.warning).toMatch(/still holds .*500\.00/);
     expect(archived.bills_still_using_it).toBe(2);
     expect(notes[1]).toEqual({ label: "Archived Wallet", detail: expect.stringMatching(/History kept · balance .*500\.00$/), undoTokens: [TOKEN] });
+  });
+
+  it("shows opening balances and changes one, sending whole minor units only when it differs", async () => {
+    const cash = tables.accounts[0] as { id: string };
+    expect((await act("list_accounts", {})).accounts[0]).toMatchObject({ name: "Cash", opening_balance: expect.stringMatching(/100\.00$/) });
+
+    const changed = await act("update_account", { account_id: cash.id, opening_balance: 250.5 });
+    expect(rpcs[0]).toEqual({ name: "assistant_update_account", args: { p_id: cash.id, p_patch: { opening_balance: 25050 } } });
+    expect(changed.account.opening_balance).toMatch(/250\.50$/);
+    expect(notes[0]).toEqual({
+      label: "Changed Cash opening balance",
+      detail: expect.stringMatching(/^Opening balance .*250\.50 · balance now /),
+      undoTokens: [TOKEN],
+    });
+
+    rpcs.length = 0;
+    // Same value again is a no-op; a name plus a new balance goes in one patch.
+    expect((await act("update_account", { account_id: cash.id, opening_balance: 250.5 })).error).toMatch(/already like that/);
+    expect((await act("update_account", { account_id: cash.id, opening_balance: 1.234 })).error).toMatch(/decimal places/);
+    expect(rpcs).toHaveLength(0);
+    await act("update_account", { account_id: cash.id, name: "Wallet", opening_balance: -20 });
+    expect(rpcs[0].args.p_patch).toEqual({ name: "Wallet", opening_balance: -2000 });
   });
 
   it("restores an archived account and refuses no-op or unknown changes", async () => {

@@ -555,7 +555,7 @@ function Form({
               type="button"
               onClick={() => setStep(2)}
               disabled={!hasAmount || !account}
-              className="mt-3 flex min-h-14 w-full items-center justify-center rounded-full bg-gold text-base font-bold text-on-gold shadow-[0_8px_24px_-8px_var(--glow)] transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
+              className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full bg-gold text-base font-semibold text-on-gold transition active:scale-[0.98] disabled:opacity-40"
             >
               {hasAmount ? "Continue" : "Enter an amount"}
             </button>
@@ -817,7 +817,7 @@ function Form({
               type="button"
               onClick={() => void save()}
               disabled={!canSave}
-              className="flex min-h-14 w-full items-center justify-center gap-2 rounded-full bg-gold text-base font-bold text-on-gold shadow-[0_8px_24px_-8px_var(--glow)] transition active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-gold text-base font-semibold text-on-gold transition active:scale-[0.98] disabled:opacity-40"
             >
               {busy ? <Spinner size={20} /> : <Check size={20} strokeWidth={3} />}
               {busy ? "Saving" : existing ? "Save changes" : copy.save}

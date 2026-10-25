@@ -147,6 +147,7 @@ async function listAccounts(c: Context, { include_archived }: Args<"list_account
       name: a.name,
       type: ACCOUNT_TYPE_LABELS[a.type],
       balance: money(a.balance, a.currency),
+      opening_balance: money(a.openingBalance, a.currency),
       ...(a.archivedAt ? { archived: true } : {}),
     })),
   };
@@ -696,12 +697,14 @@ function signedMinor(amount: number, currency: string) {
 function renameOrArchivePatch(
   current: { name: string; archivedAt: string | null },
   want: { name?: string; archived?: boolean },
+  // Another field is already changing, so "name and archive unchanged" is fine.
+  otherChange = false,
 ) {
   const patch: { name?: string; archived?: boolean } = {};
   const name = want.name?.trim();
   if (name !== undefined && name !== current.name) patch.name = name;
   if (want.archived !== undefined && want.archived !== Boolean(current.archivedAt)) patch.archived = want.archived;
-  if (patch.name === undefined && patch.archived === undefined) {
+  if (patch.name === undefined && patch.archived === undefined && !otherChange) {
     throw new ToolError(
       want.name === undefined && want.archived === undefined
         ? "Nothing to change. Say whether to rename it, archive it or restore it."
@@ -750,10 +753,37 @@ async function createAccountTool(c: Context, a: Args<"create_account">) {
   };
 }
 
+// Like the name/archive patch, plus the opening balance in whole minor units.
+function accountPatch(
+  current: { name: string; archivedAt: string | null; openingBalance: number; currency: string },
+  want: { name?: string; archived?: boolean; opening_balance?: number },
+) {
+  const patch: { name?: string; archived?: boolean; opening_balance?: number } = {};
+  if (want.opening_balance !== undefined) {
+    const minor = signedMinor(want.opening_balance, current.currency);
+    if (minor !== current.openingBalance) patch.opening_balance = minor;
+  }
+  if (want.name === undefined && want.archived === undefined) {
+    if (want.opening_balance === undefined) {
+      throw new ToolError(
+        "Nothing to change. Say whether to rename it, change its opening balance, archive it or restore it.",
+      );
+    }
+    if (patch.opening_balance === undefined) throw new ToolError("Nothing would change: it is already like that.");
+    return patch;
+  }
+  const rest = renameOrArchivePatch(
+    current,
+    { name: want.name, archived: want.archived },
+    patch.opening_balance !== undefined,
+  );
+  return { ...rest, ...patch };
+}
+
 async function updateAccountTool(c: Context, a: Args<"update_account">) {
   const existing = (await accounts(c)).find((x) => x.id === a.account_id);
   if (!existing) throw new ToolError("No account has that id. Call list_accounts.");
-  const patch = renameOrArchivePatch(existing, { name: a.name, archived: a.archived });
+  const patch = accountPatch(existing, { name: a.name, archived: a.archived, opening_balance: a.opening_balance });
   const done = allowChange(c, `account-update:${JSON.stringify([a.account_id, patch])}`);
 
   const { data, error } = await createClient().rpc("assistant_update_account", {
@@ -769,14 +799,29 @@ async function updateAccountTool(c: Context, a: Args<"update_account">) {
   if (!saved) throw notConfirmed("list_accounts");
 
   const balance = money(saved.balance, saved.currency);
+  const opening = money(saved.openingBalance, saved.currency);
+  const openingOnly =
+    patch.opening_balance !== undefined && patch.name === undefined && patch.archived === undefined;
   c.onChange?.({
-    label: renameLabel(existing.name, saved.name, patch),
-    ...(patch.archived ? { detail: `History kept · balance ${balance}` } : {}),
+    label: openingOnly
+      ? `Changed ${saved.name} opening balance`
+      : renameLabel(existing.name, saved.name, patch),
+    ...(patch.opening_balance !== undefined
+      ? { detail: `Opening balance ${opening} · balance now ${balance}` }
+      : patch.archived
+        ? { detail: `History kept · balance ${balance}` }
+        : {}),
     ...(result.undo_token ? { undoTokens: [result.undo_token] } : {}),
   });
   return {
     saved: true,
-    account: { id: saved.id, name: saved.name, archived: Boolean(saved.archivedAt), balance },
+    account: {
+      id: saved.id,
+      name: saved.name,
+      archived: Boolean(saved.archivedAt),
+      balance,
+      opening_balance: opening,
+    },
     ...(patch.archived && saved.balance !== 0
       ? { warning: `It still holds ${balance}. Archiving does not move or remove that money; mention it.` }
       : {}),

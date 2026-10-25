@@ -45,9 +45,9 @@ function useCountUp(target: number, enabled: boolean) {
 type Size = "hero" | "xl" | "lg" | "md" | "sm";
 
 const SIZE: Record<Size, { whole: string; small: string }> = {
-  hero: { whole: "text-[3.4rem] leading-none tracking-tighter", small: "text-2xl" },
-  xl: { whole: "text-4xl leading-none tracking-tight", small: "text-lg" },
-  lg: { whole: "text-2xl leading-tight tracking-tight", small: "text-base" },
+  hero: { whole: "text-[2.6rem] leading-none tracking-tighter", small: "text-xl" },
+  xl: { whole: "text-3xl leading-none tracking-tight", small: "text-base" },
+  lg: { whole: "text-xl leading-tight tracking-tight", small: "text-sm" },
   md: { whole: "text-lg leading-tight", small: "text-sm" },
   sm: { whole: "text-sm", small: "text-xs" },
 };

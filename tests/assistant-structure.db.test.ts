@@ -96,6 +96,35 @@ describe("accounts", () => {
     expect((await account(id)).archived_at).not.toBeNull();
   });
 
+  it("changes the opening balance (moving the balance by the difference), and undo puts it back", async () => {
+    const { id } = await createAccount("Opening test", { opening: 10000 });
+    await db.query(
+      `insert into transactions (user_id, account_id, type, amount, currency, occurred_at)
+       values ($1, $2, 'expense', 2500, 'GHS', now())`,
+      [uid, id],
+    );
+    const balance = async () =>
+      Number((await db.query<{ balance: string }>("select balance from account_balances where account_id = $1", [id])).rows[0].balance);
+    expect(await balance()).toBe(7500);
+
+    const changed = await updateAccount(id, { opening_balance: 20000 });
+    expect((await account(id)).opening_balance).toBe(20000);
+    expect(await balance()).toBe(17500);
+    const { rows } = await db.query("select actor, action from audit_log where id = $1", [changed.undo_token]);
+    expect(rows).toEqual([{ actor: "assistant", action: "update" }]);
+
+    await undo(changed.undo_token);
+    expect((await account(id)).opening_balance).toBe(10000);
+    expect(await balance()).toBe(7500);
+
+    // A negative opening balance (money owed) is fine; fractions and non-numbers are not.
+    await updateAccount(id, { opening_balance: -5000 });
+    expect((await account(id)).opening_balance).toBe(-5000);
+    await expect(updateAccount(id, { opening_balance: 1.5 })).rejects.toThrow(/out of range/);
+    await expect(updateAccount(id, { opening_balance: "12" })).rejects.toThrow(/must be a number/);
+    await expect(updateAccount(id, { opening_balance: 100000000000000 })).rejects.toThrow(/out of range/);
+  });
+
   it("counts the live bills on an account it archives", async () => {
     const { id } = await createAccount("Bills acct", { type: "bank" });
     await db.query(
@@ -123,7 +152,7 @@ describe("accounts", () => {
   });
 
   it("refuses unknown fields, empty patches, other people's accounts and other people's tokens", async () => {
-    await expect(updateAccount(cash, { opening_balance: 5 })).rejects.toThrow(/can't be changed this way/);
+    await expect(updateAccount(cash, { currency: "USD" })).rejects.toThrow(/can't be changed this way/);
     await expect(updateAccount(cash, {})).rejects.toThrow(/Nothing to change/);
     await expect(updateAccount(cash, { name: "Hacked" }, other)).rejects.toThrow(/not found/);
     const mine = await createAccount("Private");

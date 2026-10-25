@@ -81,7 +81,8 @@ export function ProfileButton() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Profile and settings"
-        className="flex size-11 items-center justify-center rounded-full bg-gold text-base font-bold text-on-gold shadow-[0_4px_14px_-4px_var(--glow)] transition active:scale-95"
+        data-tour="profile"
+        className="flex size-10 items-center justify-center rounded-full bg-gold text-sm font-bold text-on-gold transition active:scale-95"
       >
         {initial}
       </button>

@@ -37,7 +37,7 @@ export function BottomNav() {
       aria-label="Main"
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
     >
-      <ul className="pointer-events-auto mx-auto grid h-[4.25rem] max-w-md grid-cols-5 items-center rounded-full bg-[var(--nav-bg)] px-2 shadow-pop ring-1 ring-line backdrop-blur-xl">
+      <ul className="pointer-events-auto mx-auto grid h-16 max-w-md grid-cols-5 items-center rounded-full bg-[var(--nav-bg)] px-2 shadow-pop ring-1 ring-line backdrop-blur-xl">
         {ITEMS.map((item) => {
           const active = item.match(pathname);
           const Icon = item.icon;
@@ -48,9 +48,10 @@ export function BottomNav() {
                 <Link
                   href={item.href}
                   aria-label="Add entry"
-                  className="-mt-7 flex size-16 items-center justify-center rounded-full bg-gold text-on-gold shadow-[0_10px_28px_-6px_var(--glow)] ring-[6px] ring-bg transition active:scale-90"
+                  data-tour="add"
+                  className="-mt-5 flex size-14 items-center justify-center rounded-full bg-gold text-on-gold ring-[5px] ring-bg transition active:scale-90"
                 >
-                  <Plus size={30} strokeWidth={2.6} />
+                  <Plus size={26} strokeWidth={2.4} />
                 </Link>
               </li>
             );
@@ -61,11 +62,11 @@ export function BottomNav() {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex h-[4.25rem] flex-col items-center justify-center gap-1 text-[0.7rem] font-semibold transition-colors ${
+                className={`relative flex h-16 flex-col items-center justify-center gap-0.5 text-[0.675rem] font-medium transition-colors ${
                   active ? "text-ink" : "text-ink-3"
                 }`}
               >
-                <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+                <Icon size={20} strokeWidth={active ? 2.4 : 2} />
                 {item.label}
                 {active && (
                   <m.span
