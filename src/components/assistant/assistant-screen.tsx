@@ -13,13 +13,16 @@ import { dayLabel, localDateKey } from "@/lib/dates";
 import { READING_PHRASE, runAgent, THINKING_PHRASE } from "@/lib/assistant/agent";
 import { addConfirmed, deleteConfirmed, undoChange } from "@/lib/assistant/changes";
 import { listChats, loadChat, saveChat } from "@/lib/assistant/chats";
-import { AssistantError, readDocument } from "@/lib/assistant/client";
+import { AssistantError, describeImage, NothingToReadError, readDocument } from "@/lib/assistant/client";
+import { compactTrace } from "@/lib/assistant/memory";
 import { imageToDataUrl } from "@/lib/assistant/image";
 import { readPdf } from "@/lib/assistant/pdf";
 import { buildReview, recheckDuplicates } from "@/lib/assistant/review";
-import type { ChatMessage, NewEntry } from "@/lib/assistant/types";
+import type { ChatMessage, ModelMessage, NewEntry } from "@/lib/assistant/types";
 
 const MAX_STATEMENT_CHARS = 20_000;
+// How much of a PDF's text Penny keeps in mind when it comes with a message.
+const MAX_KEPT_PDF_CHARS = 6_000;
 const ACTIVE_CHAT_KEY = "penny-active-chat";
 const isPdf = (file: File) => file.type === "application/pdf" || /\.pdf$/i.test(file.name);
 
@@ -173,17 +176,25 @@ export function AssistantScreen() {
     const history: ChatMessage[] = [...messages, { id: crypto.randomUUID(), role: "user", text }];
     setMessages(history);
     setWorking(true);
-
     const controller = new AbortController();
     request.current = controller;
+    await answer(history, controller);
+  }
+
+  // Has Penny answer the chat so far and shows what she says. The question is
+  // already on screen, and `working` is already on.
+  async function answer(history: ChatMessage[], controller: AbortController) {
     let reply: ChatMessage;
     try {
-      const answer = await runAgent({
+      // Her look-ups are kept with the answer, so a follow-up can build on them.
+      const kept: { trace?: ModelMessage[] } = {};
+      const text = await runAgent({
         history,
         conversationId,
         queryClient,
         signal: controller.signal,
         onPhrase: setPhrase,
+        onTrace: (trace) => void (kept.trace = compactTrace(trace)),
         onProposal: (proposal) =>
           setMessages((m) => [
             ...m,
@@ -197,7 +208,13 @@ export function AssistantScreen() {
             { id: crypto.randomUUID(), role: "assistant", kind: "action", ...note },
           ]),
       });
-      reply = { id: crypto.randomUUID(), role: "assistant", kind: "text", text: answer };
+      reply = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        kind: "text",
+        text,
+        ...(kept.trace ? { trace: kept.trace } : {}),
+      };
     } catch (error) {
       if (controller.signal.aborted) return;
       const text =
@@ -290,23 +307,30 @@ export function AssistantScreen() {
     setMessages((m) => m.map((x) => (x.id === card.id ? { ...card, status: "kept" as const } : x)));
   }
 
-  // A receipt photo or pasted statement: read it, then lay it out for checking.
-  // Nothing is saved from here.
-  async function attach(attachment: Attachment) {
+  // A small picture of the photo for the chat bubble. Best effort: no picture is fine.
+  const previewOf = (attachment: Attachment) =>
+    "file" in attachment && !isPdf(attachment.file)
+      ? imageToDataUrl(attachment.file, true).catch(() => undefined)
+      : Promise.resolve(undefined);
+
+  // A photo, PDF or pasted statement. Sent alone, it is read and laid out for
+  // checking; nothing is saved from here. Sent with a message, Penny takes the
+  // message and what is in the picture together, and keeps both in mind.
+  async function attach(attachment: Attachment, caption?: string) {
+    if (caption && "file" in attachment) return attachWithMessage(attachment.file, caption);
+
     const lines = "text" in attachment ? attachment.text.split("\n").filter((l) => l.trim()).length : 0;
+    const placeholder =
+      "text" in attachment
+        ? `Statement to read (${lines} ${lines === 1 ? "line" : "lines"})`
+        : isPdf(attachment.file)
+          ? "PDF to read"
+          : "Photo to read";
+    const lineId = crypto.randomUUID();
+    const image = await previewOf(attachment);
     setMessages((m) => [
       ...m,
-      {
-        id: crypto.randomUUID(),
-        role: "user",
-        local: true,
-        text:
-          "text" in attachment
-            ? `Statement to read (${lines} ${lines === 1 ? "line" : "lines"})`
-            : isPdf(attachment.file)
-              ? "PDF to read"
-              : "Photo to read",
-      },
+      { id: lineId, role: "user", local: true, text: placeholder, ...(image ? { image } : {}) },
     ]);
     setPhrase(READING_PHRASE);
     setWorking(true);
@@ -332,12 +356,26 @@ export function AssistantScreen() {
       } else {
         input = { image: await imageToDataUrl(attachment.file) };
       }
-      const { extraction, skipped } = await readDocument(input, conversationId, controller.signal);
-      const built = await buildReview(extraction, skipped, queryClient);
-      const review = firstPageOnly
-        ? { ...built, warnings: ["This PDF is a scan, so I could only read its first page.", ...built.warnings] }
-        : built;
-      reply = { id: crypto.randomUUID(), role: "assistant", kind: "review", ...review };
+      try {
+        const { extraction, skipped } = await readDocument(input, conversationId, controller.signal);
+        const built = await buildReview(extraction, skipped, queryClient);
+        const review = firstPageOnly
+          ? { ...built, warnings: ["This PDF is a scan, so I could only read its first page.", ...built.warnings] }
+          : built;
+        reply = { id: crypto.randomUUID(), role: "assistant", kind: "review", ...review };
+      } catch (error) {
+        // Not a receipt or statement. A picture is still worth remembering: put it in
+        // words so the person can ask about it.
+        if (!(error instanceof NothingToReadError) || !("image" in input)) throw error;
+        const digest = await describeImage(input.image, conversationId, controller.signal);
+        setMessages((m) => m.map((x) => (x.id === lineId && x.role === "user" ? { ...x, digest } : x)));
+        reply = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          kind: "text",
+          text: "That doesn't look like a receipt or a statement, but I've looked at it and I'll remember it. Ask me anything about it, or tell me what to do with it.",
+        };
+      }
     } catch (error) {
       if (controller.signal.aborted) return;
       const text =
@@ -347,6 +385,53 @@ export function AssistantScreen() {
     request.current = null;
     setMessages((m) => [...m, reply]);
     setWorking(false);
+  }
+
+  // A photo or PDF sent with a message of its own: what is in it is put into words
+  // (or its text is taken), kept with the message, and Penny answers both together.
+  async function attachWithMessage(file: File, caption: string) {
+    const pdf = isPdf(file);
+    const id = crypto.randomUUID();
+    const image = await previewOf({ file });
+    const shown: ChatMessage = {
+      id,
+      role: "user",
+      text: pdf ? `${file.name}\n${caption}` : caption,
+      ...(image ? { image } : {}),
+    };
+    setMessages([...messages, shown]);
+    setPhrase(READING_PHRASE);
+    setWorking(true);
+
+    const controller = new AbortController();
+    request.current = controller;
+    let digest: string;
+    try {
+      if (pdf) {
+        const read = await readPdf(file);
+        digest =
+          "text" in read
+            ? read.text.length > MAX_KEPT_PDF_CHARS
+              ? `${read.text.slice(0, MAX_KEPT_PDF_CHARS)}\n[The rest of the PDF was left out.]`
+              : read.text
+            : `(A scanned PDF: only the first page was read.)\n${await describeImage(read.image, conversationId, controller.signal)}`;
+      } else {
+        digest = await describeImage(await imageToDataUrl(file), conversationId, controller.signal);
+      }
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const text =
+        error instanceof AssistantError ? error.message : "Something went wrong. Try again.";
+      request.current = null;
+      setMessages((m) => [...m, { id: crypto.randomUUID(), role: "assistant", kind: "notice", text }]);
+      setWorking(false);
+      return;
+    }
+
+    const withDigest: ChatMessage = { ...shown, digest };
+    setMessages((m) => m.map((x) => (x.id === id ? withDigest : x)));
+    setPhrase(THINKING_PHRASE);
+    await answer([...messages, withDigest], controller);
   }
 
   const reviewHandlers: ReviewHandlers = {

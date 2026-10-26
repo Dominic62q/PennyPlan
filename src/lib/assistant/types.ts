@@ -4,9 +4,13 @@ import type { ChartSpec } from "./chart-spec";
 // shown again.
 export type ChatMessage =
   // `local` marks a line that only stands for a photo or pasted statement the
-  // person handed over; the model never sees it.
-  | { id: string; role: "user"; text: string; local?: true }
-  | { id: string; role: "assistant"; kind: "text"; text: string }
+  // person handed over. The model sees it only through `digest`, the text of what
+  // Penny read from the attachment, kept so she can still answer about it later.
+  // `image` is a small preview of an attached photo, for showing the bubble again.
+  | { id: string; role: "user"; text: string; local?: true; digest?: string; image?: string }
+  // `trace` is the look-ups behind the answer (her requests and what the tools
+  // returned), kept so a follow-up can build on them instead of asking again.
+  | { id: string; role: "assistant"; kind: "text"; text: string; trace?: ModelMessage[] }
   | {
       id: string;
       role: "assistant";

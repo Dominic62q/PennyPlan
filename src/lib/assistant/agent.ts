@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { AssistantError, askStep, toModelMessages } from "./client";
+import { AssistantError, askStep } from "./client";
+import { toModelMessages } from "./memory";
 import type { ChartSpec } from "./chart-spec";
 import { runTool, type ToolContext } from "./tools";
 import type { ChangeNote, ChatMessage, ModelMessage, Proposal } from "./types";
@@ -50,6 +51,7 @@ export async function runAgent({
   onChange,
   onProposal,
   onChart,
+  onTrace,
 }: {
   history: ChatMessage[];
   conversationId: string;
@@ -62,8 +64,12 @@ export async function runAgent({
   onProposal?: (proposal: Proposal) => void;
   // Called when Penny draws a chart.
   onChart?: (chart: ChartSpec) => void;
+  // Called with the look-ups behind an answer (her requests and what the tools
+  // returned), just before the answer comes back, so the chat can keep them.
+  onTrace?: (trace: ModelMessage[]) => void;
 }): Promise<string> {
   const messages: ModelMessage[] = toModelMessages(history);
+  const asked = messages.length;
   // One shared tally for the whole question, so the limits on changes hold.
   const context: ToolContext = { queryClient, onChange, onProposal, onChart };
   onPhrase(THINKING_PHRASE);
@@ -78,6 +84,7 @@ export async function runAgent({
     if (!reply.tool_calls?.length) {
       const text = reply.content?.trim();
       if (!text) throw new AssistantError("Penny didn't have an answer. Try asking again.");
+      if (messages.length > asked) onTrace?.(messages.slice(asked));
       return text;
     }
 

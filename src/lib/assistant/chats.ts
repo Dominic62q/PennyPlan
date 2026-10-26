@@ -34,11 +34,42 @@ const reviewRow = z.object({
   duplicate: z.boolean(),
 });
 
+// The look-ups behind an answer, as sent to the model. Checked loosely here; they are
+// checked again before being replayed.
+const traceStep = z.union([
+  z.object({
+    role: z.literal("assistant"),
+    content: z.string().nullable(),
+    tool_calls: z
+      .array(
+        z.object({
+          id: z.string(),
+          type: z.literal("function"),
+          function: z.object({ name: z.string(), arguments: z.string() }),
+        }),
+      )
+      .optional(),
+  }),
+  z.object({ role: z.literal("tool"), tool_call_id: z.string(), content: z.string() }),
+]);
+
 const assistantBase = { id: z.string(), role: z.literal("assistant") } as const;
 
 const messageSchema = z.union([
-  z.object({ id: z.string(), role: z.literal("user"), text: z.string(), local: z.literal(true).optional() }),
-  z.object({ ...assistantBase, kind: z.literal("text"), text: z.string() }),
+  z.object({
+    id: z.string(),
+    role: z.literal("user"),
+    text: z.string(),
+    local: z.literal(true).optional(),
+    digest: z.string().optional(),
+    image: z.string().startsWith("data:image/").optional(),
+  }),
+  z.object({
+    ...assistantBase,
+    kind: z.literal("text"),
+    text: z.string(),
+    trace: z.array(traceStep).optional(),
+  }),
   z.object({
     ...assistantBase,
     kind: z.literal("action"),

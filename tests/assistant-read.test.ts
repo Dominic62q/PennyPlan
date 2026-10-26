@@ -130,6 +130,28 @@ describe("POST /api/assistant/read", () => {
     expect((await res.json()).error).toMatch(/couldn't find/);
   });
 
+  it("describes a picture in words when asked to, without reading it as a receipt", async () => {
+    upstream.mockResolvedValue(reply("A screenshot of a chat. Ama: pay me back 20 cedis."));
+    const res = await call({ ...valid, describe: true });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ digest: "A screenshot of a chat. Ama: pay me back 20 cedis." });
+
+    const sent = JSON.parse(upstream.mock.calls[0][1].body);
+    expect(sent.messages[0].content).toContain("describe a photo or screenshot");
+    expect(sent.messages[0].content).not.toContain("kind");
+    expect(sent.messages[1].content[1]).toEqual({ type: "image_url", image_url: { url: image } });
+    expect(recordTokens).toHaveBeenCalledWith(signedIn.id, 900);
+  });
+
+  it("only describes pictures, and only with a true flag", async () => {
+    const bad = [
+      { conversationId: valid.conversationId, today: valid.today, text: "some text", describe: true },
+      { ...valid, describe: "yes" },
+    ];
+    for (const body of bad) expect((await call(body)).status).toBe(400);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
   it("passes a daily limit on and turns an outage into a friendly error", async () => {
     reserveCall.mockRejectedValueOnce(new LimitError("Penny is at capacity for today.", 503));
     expect((await call(valid)).status).toBe(503);

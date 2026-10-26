@@ -3,21 +3,14 @@ import type {
   AssistantMessage,
   AssistantRequest,
   AssistantResponse,
-  ChatMessage,
   ModelMessage,
 } from "./types";
 
-// Only what was actually said goes back to the model: not action lines, not
-// error notices.
-export function toModelMessages(messages: ChatMessage[]): ModelMessage[] {
-  return messages.flatMap((m): ModelMessage[] => {
-    if (m.role === "user") return m.local ? [] : [{ role: "user", content: m.text }];
-    return m.kind === "text" ? [{ role: "assistant", content: m.text }] : [];
-  });
-}
-
 // A failure with a message that is fine to show the person as it is.
 export class AssistantError extends Error {}
+
+// The photo or text held no receipt or statement (as opposed to a failure).
+export class NothingToReadError extends AssistantError {}
 
 const today = (timeZone: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date());
@@ -85,7 +78,43 @@ export async function readDocument(
 
   if (!response.ok) {
     const { error } = (await response.json().catch(() => ({}))) as { error?: unknown };
-    throw new AssistantError(typeof error === "string" ? error : "Something went wrong. Try again.");
+    const message = typeof error === "string" ? error : "Something went wrong. Try again.";
+    throw response.status === 422 ? new NothingToReadError(message) : new AssistantError(message);
   }
   return (await response.json()) as { extraction: Extraction; skipped: number };
+}
+
+/**
+ * Has a photo or screenshot described in words (everything legible, copied out), so
+ * Penny can keep it in mind for the rest of the chat. Returns that text.
+ */
+export async function describeImage(
+  image: string,
+  conversationId: string,
+  signal: AbortSignal,
+): Promise<string> {
+  let response: Response;
+  try {
+    response = await fetch("/api/assistant/read", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        conversationId,
+        today: today(Intl.DateTimeFormat().resolvedOptions().timeZone),
+        image,
+        describe: true,
+      }),
+      signal,
+    });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    throw new AssistantError("I couldn't reach the server. Check your connection and try again.");
+  }
+
+  if (!response.ok) {
+    const { error } = (await response.json().catch(() => ({}))) as { error?: unknown };
+    throw new AssistantError(typeof error === "string" ? error : "Something went wrong. Try again.");
+  }
+  const { digest } = (await response.json()) as { digest: string };
+  return digest;
 }

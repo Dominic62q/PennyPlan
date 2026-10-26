@@ -89,7 +89,7 @@ describe("runAgent", () => {
     ]);
   });
 
-  it("keeps earlier chat but not action lines or notices", async () => {
+  it("keeps earlier chat and writes change lines down as notes, but drops notices", async () => {
     askStep.mockResolvedValueOnce(says("ok"));
     await runAgent({
       history: [
@@ -107,8 +107,27 @@ describe("runAgent", () => {
     expect(askStep.mock.calls[0][0]).toEqual([
       { role: "user", content: "hi" },
       { role: "assistant", content: "Hello" },
+      { role: "assistant", content: "[Change made: Added]" },
       { role: "user", content: "again" },
     ]);
+  });
+
+  it("reports the look-ups of an answer so they can be kept with it", async () => {
+    askStep.mockResolvedValueOnce(asksFor("get_overview"));
+    askStep.mockResolvedValueOnce(says("done"));
+    runTool.mockResolvedValue('{"ok":true}');
+    const onTrace = vi.fn();
+    await runAgent({
+      history: [{ id: "1", role: "user", text: "how am I doing" }],
+      conversationId: "chat-1234567890",
+      queryClient: new QueryClient(),
+      signal: new AbortController().signal,
+      onPhrase: () => {},
+      onTrace,
+    });
+    expect(onTrace).toHaveBeenCalledTimes(1);
+    const trace = onTrace.mock.calls[0][0];
+    expect(trace.map((m: { role: string }) => m.role)).toEqual(["assistant", "tool"]);
   });
 
   it("stops running tools once the person has pressed Stop", async () => {

@@ -106,7 +106,7 @@ describe("POST /api/assistant", () => {
       { ...valid, messages: [] },
       { ...valid, messages: [{ role: "system", content: "x" }] },
       { ...valid, messages: [{ role: "assistant", content: "last turn must be the user's" }] },
-      { ...valid, messages: [{ role: "user", content: "x".repeat(2_001) }] },
+      { ...valid, messages: [{ role: "user", content: "x".repeat(9_001) }] },
       { ...valid, conversationId: "../etc" },
       { ...valid, timeZone: "Mars/Base" },
       { ...valid, today: "tomorrow" },

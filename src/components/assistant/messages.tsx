@@ -26,12 +26,22 @@ export function Avatar({ pulse = false, mood }: { pulse?: boolean; mood?: Mood }
   );
 }
 
-export function UserBubble({ text }: { text: string }) {
+export function UserBubble({ text, image }: { text: string; image?: string }) {
   return (
-    <div className="flex justify-end">
-      <p className="max-w-[84%] select-text whitespace-pre-wrap break-words rounded-[1.25rem] rounded-br-md bg-gold px-4 py-3 text-base font-medium leading-snug text-on-gold">
-        {text}
-      </p>
+    <div className="flex flex-col items-end gap-1.5">
+      {image && (
+        // eslint-disable-next-line @next/next/no-img-element -- a small saved preview, not a site image
+        <img
+          src={image}
+          alt="Photo you sent"
+          className="max-h-56 max-w-[60%] rounded-[1.25rem] rounded-br-md border border-line object-cover"
+        />
+      )}
+      {text && (
+        <p className="max-w-[84%] select-text whitespace-pre-wrap break-words rounded-[1.25rem] rounded-br-md bg-gold px-4 py-3 text-base font-medium leading-snug text-on-gold">
+          {text}
+        </p>
+      )}
     </div>
   );
 }
@@ -274,7 +284,7 @@ export function MessageRow({
   onKeep: (message: Extract<ChatMessage, { kind: "confirm" }>) => void;
   review: ReviewHandlers;
 }) {
-  if (message.role === "user") return <UserBubble text={message.text} />;
+  if (message.role === "user") return <UserBubble text={message.text} image={message.image} />;
   const showAvatar = previous?.role !== "assistant";
   return (
     <AssistantRow showAvatar={showAvatar} mood={message.kind === "notice" ? "sorry" : undefined}>
