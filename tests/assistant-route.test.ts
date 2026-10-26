@@ -228,6 +228,34 @@ describe("POST /api/assistant", () => {
     expect(upstream).not.toHaveBeenCalled();
   });
 
+  it("sets no token cap, so the model's thinking never starves its reply", async () => {
+    await call(valid);
+    expect(JSON.parse(upstream.mock.calls[0][1].body).max_tokens).toBeUndefined();
+  });
+
+  it("asks again once when the model comes back empty, and counts both tries", async () => {
+    upstream
+      .mockResolvedValueOnce(
+        Response.json({ choices: [{ finish_reason: "length", message: { content: "" } }], usage: { total_tokens: 100 } }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({ choices: [{ message: { content: "Here you go." } }], usage: { total_tokens: 40 } }),
+      );
+    const res = await call(valid);
+    expect(res.status).toBe(200);
+    expect((await res.json()).message.content).toBe("Here you go.");
+    expect(upstream).toHaveBeenCalledTimes(2);
+    expect(recordTokens).toHaveBeenCalledWith(signedIn.id, 140);
+  });
+
+  it("gives up with a readable error when the model stays empty", async () => {
+    upstream.mockImplementation(async () => Response.json({ choices: [{ message: { content: "" } }] }));
+    const res = await call(valid);
+    expect(res.status).toBe(502);
+    expect((await res.json()).error).toMatch(/unreadable/);
+    expect(upstream).toHaveBeenCalledTimes(2);
+  });
+
   it("turns a model outage into a friendly error", async () => {
     upstream.mockResolvedValue(new Response("secret details", { status: 500 }));
     const res = await call(valid);

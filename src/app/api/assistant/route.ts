@@ -19,6 +19,9 @@ const MAX_USER_CHARS = 9_000;
 const MAX_ITEM_CHARS = 12_000;
 const MAX_TOTAL_CHARS = 110_000;
 const MAX_CALLS_PER_STEP = 8;
+// The function may run for 60 seconds, so a slow first try leaves no time for a second one.
+const UPSTREAM_TIMEOUT_MS = 50_000;
+const RETRY_BEFORE_MS = 20_000;
 const MAX_ARGUMENT_CHARS = 4_000;
 
 const fail = (status: number, error: string) => Response.json({ error }, { status });
@@ -134,7 +137,7 @@ function systemPrompt({
 }
 
 type UpstreamBody = {
-  choices?: Array<{ message?: { content?: string | null; tool_calls?: ToolCall[] } }>;
+  choices?: Array<{ finish_reason?: string; message?: { content?: string | null; tool_calls?: ToolCall[] } }>;
   usage?: { total_tokens?: number };
 };
 
@@ -156,6 +159,7 @@ export async function POST(request: Request) {
     parsed = null;
   }
   if (!parsed) return fail(400, "That request wasn't valid.");
+  const toolsEnabled = parsed.toolsEnabled;
 
   // 3. May they, right now.
   try {
@@ -174,7 +178,8 @@ export async function POST(request: Request) {
     model: model(),
     messages: [{ role: "system", content: systemPrompt({ ...parsed, userName }) }, ...parsed.messages],
     temperature: 0.2,
-    max_tokens: 1_200,
+    // No token cap: the model thinks before it answers, and the thinking counts, so a
+    // cap leaves long chats with no room to reply. It stops when it is done.
     stream: false,
     ...(parsed.toolsEnabled ? { tools: toolDefinitions(), tool_choice: "auto" } : {}),
   });
@@ -188,47 +193,66 @@ export async function POST(request: Request) {
         "user-agent": "penny-plan-assistant/1.0",
       },
       body,
-      signal: AbortSignal.timeout(40_000),
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
 
-  let upstream: Response;
-  try {
-    upstream = await send();
-    // A busy provider often clears within a moment: one quiet retry before giving up.
-    if (upstream.status === 429) {
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
+  // One call to the model: what it said, the tools it asked for that we know, or why not.
+  type Attempt = { failure: Response } | { content: string | null; toolCalls: ToolCall[]; tokens?: number };
+  async function attempt(): Promise<Attempt> {
+    let upstream: Response;
+    try {
       upstream = await send();
+      // A busy provider often clears within a moment: one quiet retry before giving up.
+      if (upstream.status === 429) {
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+        upstream = await send();
+      }
+    } catch {
+      console.error("assistant: upstream request failed");
+      return { failure: fail(504, "Penny took too long to answer. Try again.") };
     }
-  } catch {
-    console.error("assistant: upstream request failed");
-    return fail(504, "Penny took too long to answer. Try again.");
+
+    if (!upstream.ok) {
+      // Status and the provider's error type only: the body could echo what was sent.
+      const kind = await upstream
+        .json()
+        .then((b: { error?: { type?: unknown; code?: unknown } }) =>
+          String(b?.error?.type ?? b?.error?.code ?? "").slice(0, 60),
+        )
+        .catch(() => "");
+      console.error("assistant: upstream status", upstream.status, kind);
+      return { failure: fail(upstream.status === 429 ? 503 : 502, "Penny is unavailable right now. Try again shortly.") };
+    }
+
+    const data = (await upstream.json().catch(() => ({}))) as UpstreamBody;
+    const choice = data.choices?.[0];
+    const message = choice?.message;
+    // Only tools we know about get back to the browser, whatever the model asked for.
+    const toolCalls = toolsEnabled
+      ? (message?.tool_calls ?? []).filter((call) => isToolName(call.function?.name))
+      : [];
+    const content = message?.content ? stripThinking(message.content) : null;
+    if (!toolCalls.length && !content) {
+      console.error("assistant: empty reply", choice?.finish_reason ?? "no choice");
+    }
+    return { content, toolCalls, tokens: data.usage?.total_tokens };
   }
 
-  if (!upstream.ok) {
-    // Status and the provider's error type only: the body could echo what was sent.
-    const kind = await upstream
-      .json()
-      .then((b: { error?: { type?: unknown; code?: unknown } }) =>
-        String(b?.error?.type ?? b?.error?.code ?? "").slice(0, 60),
-      )
-      .catch(() => "");
-    console.error("assistant: upstream status", upstream.status, kind);
-    return fail(upstream.status === 429 ? 503 : 502, "Penny is unavailable right now. Try again shortly.");
+  // An empty reply (the model ran out of room thinking, or hiccuped) is asked again
+  // once, while there is still time, instead of being handed to the person as an error.
+  const started = Date.now();
+  let outcome = await attempt();
+  if ("content" in outcome && !outcome.content && !outcome.toolCalls.length && Date.now() - started < RETRY_BEFORE_MS) {
+    const first = outcome;
+    outcome = await attempt();
+    if ("content" in outcome) outcome.tokens = (outcome.tokens ?? 0) + (first.tokens ?? 0);
   }
+  if ("failure" in outcome) return outcome.failure;
 
-  const data = (await upstream.json()) as UpstreamBody;
-  const message = data.choices?.[0]?.message;
-  if (!message) return fail(502, "Penny sent back something unreadable. Try again.");
-
-  void recordTokens(user.id, data.usage?.total_tokens).catch(() =>
+  void recordTokens(user.id, outcome.tokens).catch(() =>
     console.error("assistant: token accounting failed"),
   );
-
-  // Only tools we know about get back to the browser, whatever the model asked for.
-  const toolCalls = parsed.toolsEnabled
-    ? (message.tool_calls ?? []).filter((call) => isToolName(call.function?.name))
-    : [];
-  const content = message.content ? stripThinking(message.content) : null;
+  const { content, toolCalls } = outcome;
   if (!toolCalls.length && !content) return fail(502, "Penny sent back something unreadable. Try again.");
 
   const result: AssistantResponse = {

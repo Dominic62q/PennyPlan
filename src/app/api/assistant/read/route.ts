@@ -117,7 +117,6 @@ export async function POST(request: Request) {
           { role: "user", content },
         ],
         temperature: 0,
-        max_tokens: parsed.describe ? 1_200 : 6_000,
         stream: false,
       }),
       signal: AbortSignal.timeout(55_000),
