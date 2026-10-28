@@ -3,6 +3,7 @@ import type {
   AssistantMessage,
   AssistantRequest,
   AssistantResponse,
+  AssistantStreamEvent,
   ModelMessage,
 } from "./types";
 
@@ -19,7 +20,12 @@ const today = (timeZone: string) =>
 export async function askStep(
   messages: ModelMessage[],
   conversationId: string,
-  options: { toolsEnabled: boolean; signal: AbortSignal },
+  options: {
+    toolsEnabled: boolean;
+    signal: AbortSignal;
+    // Gets the new words of the answer as they are written.
+    onText?: (more: string) => void;
+  },
 ): Promise<AssistantMessage> {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const body: AssistantRequest = {
@@ -28,6 +34,7 @@ export async function askStep(
     toolsEnabled: options.toolsEnabled,
     today: today(timeZone),
     timeZone,
+    stream: true,
   };
 
   let response: Response;
@@ -49,7 +56,45 @@ export async function askStep(
       typeof error === "string" ? error : "Something went wrong. Try again.",
     );
   }
-  const { message } = (await response.json()) as AssistantResponse;
+  if (!response.headers.get("content-type")?.includes("ndjson") || !response.body) {
+    const { message } = (await response.json()) as AssistantResponse;
+    return message;
+  }
+
+  // One JSON event per line: new words, then `done` with the whole message.
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let message: AssistantMessage | null = null;
+  const handle = (line: string) => {
+    if (!line.trim()) return;
+    let event: AssistantStreamEvent;
+    try {
+      event = JSON.parse(line) as AssistantStreamEvent;
+    } catch {
+      return;
+    }
+    if (event.type === "text") options.onText?.(event.text);
+    else if (event.type === "done") message = event.message;
+    else if (event.type === "error") throw new AssistantError(event.error);
+  };
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let newline: number;
+      while ((newline = buffer.indexOf("\n")) >= 0) {
+        handle(buffer.slice(0, newline));
+        buffer = buffer.slice(newline + 1);
+      }
+    }
+    handle(buffer);
+  } catch (error) {
+    if (error instanceof AssistantError || options.signal.aborted) throw error;
+    throw new AssistantError("I lost the connection while Penny was answering. Try again.");
+  }
+  if (!message) throw new AssistantError("Penny's answer got cut off. Try again.");
   return message;
 }
 

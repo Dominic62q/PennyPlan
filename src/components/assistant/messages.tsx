@@ -319,6 +319,17 @@ export function MessageRow({
   );
 }
 
+// Penny's answer as it is being written. Becomes the normal bubble once it is done.
+export function WritingRow({ text }: { text: string }) {
+  return (
+    <AssistantRow showAvatar mood="thinking">
+      <div className="max-w-[92%] select-text break-words rounded-[1.25rem] rounded-tl-md bg-surface px-4 py-3 text-base leading-snug">
+        <RichText text={text} />
+      </div>
+    </AssistantRow>
+  );
+}
+
 // Shown while Penny works. A short plain phrase, never the inner steps.
 export function WorkingRow({ phrase }: { phrase: string }) {
   return (

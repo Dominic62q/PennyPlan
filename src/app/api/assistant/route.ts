@@ -1,11 +1,14 @@
 import { isToolName, toolDefinitions } from "@/lib/assistant/tool-definitions";
 import { firstName } from "@/lib/auth/schema";
 import type {
+  AssistantMessage,
   AssistantRequest,
   AssistantResponse,
+  AssistantStreamEvent,
   ModelMessage,
   ToolCall,
 } from "@/lib/assistant/types";
+import { readChatStream } from "@/lib/server/chat-stream";
 import { LimitError, recordTokens, reserveCall } from "@/lib/server/assistant-usage";
 import { baseUrl, chatModel as model, stripThinking } from "@/lib/server/opencode";
 import { createClient } from "@/lib/supabase/server";
@@ -102,6 +105,7 @@ function parseRequest(body: unknown): Omit<AssistantRequest, "userName"> | null 
     conversationId: input.conversationId,
     messages,
     toolsEnabled: input.toolsEnabled !== false,
+    stream: input.stream === true,
     today: input.today,
     timeZone: input.timeZone,
   };
@@ -136,10 +140,8 @@ function systemPrompt({
   ].join("\n");
 }
 
-type UpstreamBody = {
-  choices?: Array<{ finish_reason?: string; message?: { content?: string | null; tool_calls?: ToolCall[] } }>;
-  usage?: { total_tokens?: number };
-};
+type Failure = { failure: { status: number; error: string } };
+type Outcome = { content: string | null; toolCalls: ToolCall[]; tokens?: number };
 
 export async function POST(request: Request) {
   const apiKey = process.env.OPENCODE_API_KEY;
@@ -159,7 +161,8 @@ export async function POST(request: Request) {
     parsed = null;
   }
   if (!parsed) return fail(400, "That request wasn't valid.");
-  const toolsEnabled = parsed.toolsEnabled;
+  const { toolsEnabled, conversationId } = parsed;
+  const userId = user.id;
 
   // 3. May they, right now.
   try {
@@ -173,32 +176,37 @@ export async function POST(request: Request) {
   const { data: profile } = await supabase.from("profiles").select("display_name").maybeSingle();
   const userName = firstName(profile?.display_name);
 
-  // 4. Ask the model. The key never leaves this function.
+  // 4. Ask the model. The key never leaves this function. It always answers as a
+  // stream, so the words can be passed on as they come, or gathered up if the
+  // browser wants one reply.
   const body = JSON.stringify({
     model: model(),
     messages: [{ role: "system", content: systemPrompt({ ...parsed, userName }) }, ...parsed.messages],
     temperature: 0.2,
     // No token cap: the model thinks before it answers, and the thinking counts, so a
     // cap leaves long chats with no room to reply. It stops when it is done.
-    stream: false,
-    ...(parsed.toolsEnabled ? { tools: toolDefinitions(), tool_choice: "auto" } : {}),
+    stream: true,
+    stream_options: { include_usage: true },
+    ...(toolsEnabled ? { tools: toolDefinitions(), tool_choice: "auto" } : {}),
   });
+  // Ends the model's call when the person stops, so nothing keeps running unseen.
+  const stop = new AbortController();
+  const signal = AbortSignal.any([stop.signal, AbortSignal.timeout(UPSTREAM_TIMEOUT_MS)]);
   const send = () =>
     fetch(`${baseUrl()}/v1/chat/completions`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${apiKey}`,
-        "x-opencode-session": parsed.conversationId,
+        "x-opencode-session": conversationId,
         "user-agent": "penny-plan-assistant/1.0",
       },
       body,
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      signal,
     });
 
-  // One call to the model: what it said, the tools it asked for that we know, or why not.
-  type Attempt = { failure: Response } | { content: string | null; toolCalls: ToolCall[]; tokens?: number };
-  async function attempt(): Promise<Attempt> {
+  // Opens one call to the model, or says why not.
+  async function open(): Promise<Response | Failure> {
     let upstream: Response;
     try {
       upstream = await send();
@@ -209,10 +217,9 @@ export async function POST(request: Request) {
       }
     } catch {
       console.error("assistant: upstream request failed");
-      return { failure: fail(504, "Penny took too long to answer. Try again.") };
+      return { failure: { status: 504, error: "Penny took too long to answer. Try again." } };
     }
-
-    if (!upstream.ok) {
+    if (!upstream.ok || !upstream.body) {
       // Status and the provider's error type only: the body could echo what was sent.
       const kind = await upstream
         .json()
@@ -221,54 +228,107 @@ export async function POST(request: Request) {
         )
         .catch(() => "");
       console.error("assistant: upstream status", upstream.status, kind);
-      return { failure: fail(upstream.status === 429 ? 503 : 502, "Penny is unavailable right now. Try again shortly.") };
+      return {
+        failure: {
+          status: upstream.status === 429 ? 503 : 502,
+          error: "Penny is unavailable right now. Try again shortly.",
+        },
+      };
     }
+    return upstream;
+  }
 
-    const data = (await upstream.json().catch(() => ({}))) as UpstreamBody;
-    const choice = data.choices?.[0];
-    const message = choice?.message;
-    // Only tools we know about get back to the browser, whatever the model asked for.
-    const toolCalls = toolsEnabled
-      ? (message?.tool_calls ?? []).filter((call) => isToolName(call.function?.name))
-      : [];
-    const content = message?.content ? stripThinking(message.content) : null;
-    if (!toolCalls.length && !content) {
-      console.error("assistant: empty reply", choice?.finish_reason ?? "no choice");
+  // Reads one call to the end: what it said, and the tools it asked for that we know.
+  async function consume(upstream: Response, onText: (more: string) => void): Promise<Outcome | Failure> {
+    try {
+      const reply = await readChatStream(upstream.body!, onText);
+      // Only tools we know about get back to the browser, whatever the model asked for.
+      const toolCalls = toolsEnabled ? reply.toolCalls.filter((call) => isToolName(call.function.name)) : [];
+      const content = stripThinking(reply.raw) || null;
+      if (!toolCalls.length && !content) console.error("assistant: empty reply", reply.finish ?? "no finish");
+      return { content, toolCalls, tokens: reply.tokens };
+    } catch {
+      console.error("assistant: upstream stream failed");
+      return { failure: { status: 504, error: "Penny took too long to answer. Try again." } };
     }
-    return { content, toolCalls, tokens: data.usage?.total_tokens };
   }
 
   // An empty reply (the model ran out of room thinking, or hiccuped) is asked again
   // once, while there is still time, instead of being handed to the person as an error.
   const started = Date.now();
-  let outcome = await attempt();
-  if ("content" in outcome && !outcome.content && !outcome.toolCalls.length && Date.now() - started < RETRY_BEFORE_MS) {
-    const first = outcome;
-    outcome = await attempt();
-    if ("content" in outcome) outcome.tokens = (outcome.tokens ?? 0) + (first.tokens ?? 0);
+  async function converse(first: Response, onText: (more: string) => void): Promise<Outcome | Failure> {
+    let outcome = await consume(first, onText);
+    if ("content" in outcome && !outcome.content && !outcome.toolCalls.length && Date.now() - started < RETRY_BEFORE_MS) {
+      const again = await open();
+      if ("failure" in again) return again;
+      const second = await consume(again, onText);
+      if ("content" in second) second.tokens = (second.tokens ?? 0) + (outcome.tokens ?? 0);
+      outcome = second;
+    }
+    if ("content" in outcome) {
+      void recordTokens(userId, outcome.tokens).catch(() =>
+        console.error("assistant: token accounting failed"),
+      );
+    }
+    return outcome;
   }
-  if ("failure" in outcome) return outcome.failure;
 
-  void recordTokens(user.id, outcome.tokens).catch(() =>
-    console.error("assistant: token accounting failed"),
-  );
-  const { content, toolCalls } = outcome;
-  if (!toolCalls.length && !content) return fail(502, "Penny sent back something unreadable. Try again.");
+  const unreadable = { status: 502, error: "Penny sent back something unreadable. Try again." };
+  const usable = (outcome: Outcome) => outcome.toolCalls.length > 0 || Boolean(outcome.content);
+  const messageOf = ({ content, toolCalls }: Outcome): AssistantMessage => ({
+    role: "assistant",
+    content,
+    ...(toolCalls.length
+      ? {
+          tool_calls: toolCalls.slice(0, MAX_CALLS_PER_STEP).map((call) => ({
+            id: call.id,
+            type: "function" as const,
+            function: { name: call.function.name, arguments: call.function.arguments || "{}" },
+          })),
+        }
+      : {}),
+  });
 
-  const result: AssistantResponse = {
-    message: {
-      role: "assistant",
-      content: content || null,
-      ...(toolCalls.length
-        ? {
-            tool_calls: toolCalls.slice(0, MAX_CALLS_PER_STEP).map((call) => ({
-              id: call.id,
-              type: "function" as const,
-              function: { name: call.function.name, arguments: call.function.arguments || "{}" },
-            })),
-          }
-        : {}),
+  const first = await open();
+  if ("failure" in first) return fail(first.failure.status, first.failure.error);
+
+  if (!parsed.stream) {
+    const outcome = await converse(first, () => {});
+    if ("failure" in outcome) return fail(outcome.failure.status, outcome.failure.error);
+    if (!usable(outcome)) return fail(unreadable.status, unreadable.error);
+    return Response.json({ message: messageOf(outcome) } satisfies AssistantResponse);
+  }
+
+  // One line of JSON per event; the browser shows `text` as it comes and trusts `done`.
+  const encoder = new TextEncoder();
+  const events = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let live = true;
+      const emit = (event: AssistantStreamEvent) => {
+        if (live) controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      };
+      try {
+        const outcome = await converse(first, (text) => emit({ type: "text", text }));
+        if ("failure" in outcome) emit({ type: "error", error: outcome.failure.error });
+        else if (!usable(outcome)) emit({ type: "error", error: unreadable.error });
+        else emit({ type: "done", message: messageOf(outcome) });
+      } catch {
+        emit({ type: "error", error: "Something went wrong. Try again." });
+      } finally {
+        if (live) controller.close();
+        live = false;
+      }
     },
-  };
-  return Response.json(result);
+    // The person stopped or left: stop the model too.
+    cancel() {
+      stop.abort();
+    },
+  });
+  return new Response(events, {
+    headers: {
+      "content-type": "application/x-ndjson; charset=utf-8",
+      "cache-control": "no-store, no-transform",
+      "x-accel-buffering": "no",
+    },
+  });
 }

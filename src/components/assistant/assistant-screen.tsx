@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Composer, type Attachment } from "@/components/assistant/composer";
 import { chatKeys, HistorySheet } from "@/components/assistant/history-sheet";
-import { MessageRow, WorkingRow, type ReviewHandlers } from "@/components/assistant/messages";
+import { MessageRow, WorkingRow, WritingRow, type ReviewHandlers } from "@/components/assistant/messages";
 import { Greeting } from "@/components/greeting";
 import { Mascot } from "@/components/ui/mascot";
 import { dayLabel, localDateKey } from "@/lib/dates";
@@ -37,6 +37,8 @@ export function AssistantScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [working, setWorking] = useState(false);
   const [phrase, setPhrase] = useState(THINKING_PHRASE);
+  // The answer so far while Penny is still writing it.
+  const [writing, setWriting] = useState("");
   const queryClient = useQueryClient();
   const [conversationId, setConversationId] = useState(() => crypto.randomUUID());
   const request = useRef<AbortController | null>(null);
@@ -82,6 +84,11 @@ export function AssistantScreen() {
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [messages, working]);
+
+  // Follow the words as they are written, without the smooth-scroll lag.
+  useEffect(() => {
+    if (writing) end.current?.scrollIntoView({ block: "end" });
+  }, [writing]);
 
   // What is on screen right now, readable from timers and cleanup code.
   const latest = useRef({ id: conversationId, messages });
@@ -169,6 +176,7 @@ export function AssistantScreen() {
   function stop() {
     request.current?.abort();
     request.current = null;
+    setWriting("");
     setWorking(false);
   }
 
@@ -194,6 +202,9 @@ export function AssistantScreen() {
         queryClient,
         signal: controller.signal,
         onPhrase: setPhrase,
+        onText: (soFar) => {
+          if (!controller.signal.aborted) setWriting(soFar);
+        },
         onTrace: (trace) => void (kept.trace = compactTrace(trace)),
         onProposal: (proposal) =>
           setMessages((m) => [
@@ -222,6 +233,7 @@ export function AssistantScreen() {
       reply = { id: crypto.randomUUID(), role: "assistant", kind: "notice", text };
     }
     request.current = null;
+    setWriting("");
     setMessages((m) => [...m, reply]);
     setWorking(false);
   }
@@ -383,6 +395,7 @@ export function AssistantScreen() {
       reply = { id: crypto.randomUUID(), role: "assistant", kind: "notice", text };
     }
     request.current = null;
+    setWriting("");
     setMessages((m) => [...m, reply]);
     setWorking(false);
   }
@@ -557,7 +570,7 @@ export function AssistantScreen() {
                 review={reviewHandlers}
               />
             ))}
-            {working && <WorkingRow phrase={phrase} />}
+            {working && (writing ? <WritingRow text={writing} /> : <WorkingRow phrase={phrase} />)}
             <div ref={end} />
           </div>
         </div>

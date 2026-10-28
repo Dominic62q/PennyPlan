@@ -107,7 +107,17 @@ export type AssistantRequest = {
   today: string; // YYYY-MM-DD in the person's time zone
   timeZone: string;
   userName?: string;
+  // Ask for the reply as a stream of events (see AssistantStreamEvent) instead of one
+  // JSON body, so the words can show up as they are written.
+  stream?: boolean;
 };
 
 export type AssistantMessage = Extract<ModelMessage, { role: "assistant" }>;
 export type AssistantResponse = { message: AssistantMessage };
+
+// One line of a streamed reply. `text` carries new words to show; the last event is
+// always `done` (with the whole message, which is the truth) or `error`.
+export type AssistantStreamEvent =
+  | { type: "text"; text: string }
+  | { type: "done"; message: AssistantMessage }
+  | { type: "error"; error: string };

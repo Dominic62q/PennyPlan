@@ -52,6 +52,7 @@ export async function runAgent({
   onProposal,
   onChart,
   onTrace,
+  onText,
 }: {
   history: ChatMessage[];
   conversationId: string;
@@ -67,6 +68,9 @@ export async function runAgent({
   // Called with the look-ups behind an answer (her requests and what the tools
   // returned), just before the answer comes back, so the chat can keep them.
   onTrace?: (trace: ModelMessage[]) => void;
+  // Called with the answer so far as it is written. Called with "" when a step turns
+  // out to be look-ups instead, so nothing half-said is left on screen.
+  onText?: (soFar: string) => void;
 }): Promise<string> {
   const messages: ModelMessage[] = toModelMessages(history);
   const asked = messages.length;
@@ -76,12 +80,21 @@ export async function runAgent({
 
   for (let step = 1; step <= MAX_STEPS; step++) {
     // On the last step she can't ask for more, so she has to answer.
+    let soFar = "";
     const reply = await askStep(messages, conversationId, {
       toolsEnabled: step < MAX_STEPS,
       signal,
+      onText: onText
+        ? (more) => {
+            soFar += more;
+            onText(soFar);
+          }
+        : undefined,
     });
 
-    if (!reply.tool_calls?.length) {
+    if (reply.tool_calls?.length) {
+      if (soFar) onText?.("");
+    } else {
       const text = reply.content?.trim();
       if (!text) throw new AssistantError("Penny didn't have an answer. Try asking again.");
       if (messages.length > asked) onTrace?.(messages.slice(asked));
