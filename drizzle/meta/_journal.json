@@ -155,6 +155,20 @@
       "when": 1792917143632,
       "tag": "0021_bill_paid_date",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793186539399,
+      "tag": "0022_bill_and_category_logos",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793186544372,
+      "tag": "0023_logo_logic",
+      "breakpoints": true
     }
   ]
 }

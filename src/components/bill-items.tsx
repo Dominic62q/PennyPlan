@@ -29,6 +29,8 @@ function useRuleTile(rule: RecurringRule) {
   const { byId } = useCategoryLookup();
   const category = rule.categoryId ? byId.get(rule.categoryId) : undefined;
   return {
+    // The bill's own logo first, then its category's, then the plain icon.
+    logo: rule.logo ?? category?.logo ?? null,
     icon: categoryIcon(category?.icon ?? (rule.kind === "income" ? "briefcase" : "receipt")),
     color: categoryColor(
       category?.color ?? (rule.kind === "income" ? "#0ca678" : "#7048e8"),
@@ -68,7 +70,7 @@ export function UpcomingRow({
   const tile = useRuleTile(rule);
   const body = (
     <>
-      <IconTile icon={tile.icon} color={tile.color} />
+      <IconTile icon={tile.icon} color={tile.color} logo={tile.logo} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           <span className="truncate font-semibold">{rule.name}</span>
@@ -137,7 +139,7 @@ export function DueCard({
         disabled={!onOpen}
         className="flex w-full items-center gap-3 p-4 pb-3 text-left"
       >
-        <IconTile icon={tile.icon} color={tile.color} />
+        <IconTile icon={tile.icon} color={tile.color} logo={tile.logo} />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold">{rule.name}</span>
           <DueLine nextDue={rule.nextDue} />

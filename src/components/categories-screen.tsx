@@ -3,6 +3,7 @@
 import { Archive, Check, Plus, Sparkles } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { QueryState } from "@/components/query-state";
+import { RemoveLogo } from "@/components/remove-logo";
 import { Button } from "@/components/ui/button";
 import { CategoryBadge, IconTile } from "@/components/ui/category-badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -413,6 +414,8 @@ function CategoryForm({
           {name.trim() || (kind === "expense" ? "New spending category" : "New income category")}
         </p>
       </div>
+
+      {existing && <RemoveLogo kind="category" id={existing.id} logo={existing.logo} />}
 
       <label className="flex flex-col gap-2 text-sm font-semibold">
         Name

@@ -1,5 +1,7 @@
 // Client-side shapes of ledger rows. Money is always integer minor units.
 
+import type { Logo } from "./logo";
+
 export const ACCOUNT_TYPES = [
   "cash",
   "bank",
@@ -53,6 +55,10 @@ export type Category = {
   parentId: string | null;
   icon: string | null;
   color: string | null;
+  // A brand mark (Spotify, Netflix) shown in place of the icon; see logo.ts.
+  logo: Logo | null;
+  // Whether a logo has been looked for under the current name.
+  logoChecked: boolean;
   sortOrder: number;
   archivedAt: string | null;
 };
@@ -105,6 +111,8 @@ export type RecurringRule = {
   // a tap on "Paid".
   autoPost: boolean;
   paused: boolean;
+  logo: Logo | null;
+  logoChecked: boolean;
 };
 
 // Signed effect of a row on its account balance.

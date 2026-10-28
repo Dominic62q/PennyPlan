@@ -12,6 +12,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import { logoCheck, logoColumns } from "./_logo";
 import { ownerPolicies, timestamps, userIdColumn } from "./_shared";
 import { accounts } from "./accounts";
 import { categories } from "./categories";
@@ -44,6 +45,7 @@ export const recurringRules = pgTable(
     endDate: date("end_date", { mode: "string" }),
     autoPost: boolean("auto_post").notNull().default(false),
     pausedAt: timestamp("paused_at", { withTimezone: true }),
+    ...logoColumns(),
     ...timestamps(),
   },
   (t) => [
@@ -79,6 +81,7 @@ export const recurringRules = pgTable(
       "recurring_rules_anchor_chk",
       sql`${t.anchorDay} between 1 and 31`,
     ),
+    logoCheck("recurring_rules_logo_chk", t.logo),
     index("recurring_rules_user_due_idx").on(t.userId, t.nextDue),
     ...ownerPolicies("recurring_rules", t.userId),
   ],

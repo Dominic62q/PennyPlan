@@ -1,6 +1,7 @@
 import { AssistantFab } from "@/components/assistant-fab";
 import { BottomNav } from "@/components/bottom-nav";
 import { LaunchOverlay } from "@/components/launch-overlay";
+import { BrandLogos } from "@/components/brand-logos";
 import { RecurringSync } from "@/components/recurring-sync";
 import { Tour } from "@/components/tour";
 
@@ -16,6 +17,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <BottomNav />
       <LaunchOverlay />
       <RecurringSync />
+      <BrandLogos />
       <Tour />
     </>
   );

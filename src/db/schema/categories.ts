@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { logoCheck, logoColumns } from "./_logo";
 import { ownerPolicies, timestamps, userIdColumn } from "./_shared";
 
 // Two levels (category > subcategory), separate trees for income and expense.
@@ -25,6 +26,7 @@ export const categories = pgTable(
     icon: text("icon"),
     color: text("color"),
     sortOrder: integer("sort_order").notNull().default(0),
+    ...logoColumns(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     ...timestamps(),
   },
@@ -44,6 +46,7 @@ export const categories = pgTable(
     ),
     check("categories_name_chk", sql`char_length(btrim(${t.name})) between 1 and 60`),
     check("categories_kind_chk", sql`${t.kind} in ('income','expense')`),
+    logoCheck("categories_logo_chk", t.logo),
     ...ownerPolicies("categories", t.userId),
   ],
 );

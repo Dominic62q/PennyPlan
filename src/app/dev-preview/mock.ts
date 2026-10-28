@@ -65,6 +65,8 @@ const categories: Category[] = categorySeeds.map(([id, name, kind, icon, color, 
   parentId: parent ?? null,
   icon,
   color,
+  logo: null,
+  logoChecked: true,
   sortOrder: i,
   archivedAt: null,
 }));
@@ -279,6 +281,8 @@ const recurringRules: RecurringRule[] = ruleSeeds.map(
       endDate: null,
       autoPost,
       paused: false,
+      logo: null,
+      logoChecked: true,
       ...extra,
     };
   },

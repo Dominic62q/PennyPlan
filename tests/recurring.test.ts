@@ -31,6 +31,8 @@ function rule(over: Partial<RecurringRule> = {}): RecurringRule {
     endDate: null,
     autoPost: false,
     paused: false,
+    logo: null,
+    logoChecked: true,
     ...over,
   };
 }

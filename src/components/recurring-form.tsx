@@ -2,6 +2,7 @@
 
 import { Pause, Play, Trash2, X } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
+import { RemoveLogo } from "@/components/remove-logo";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/date-picker";
 import { Segmented } from "@/components/ui/segmented";
@@ -126,6 +127,7 @@ export function RecurringForm({ rule, onSave, onPause, onRemove }: Props) {
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-5 pb-2" noValidate>
+      {rule && <RemoveLogo kind="bill" id={rule.id} logo={rule.logo} />}
       <Segmented
         label="Type"
         value={kind}

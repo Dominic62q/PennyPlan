@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { parseLogo } from "@/lib/ledger/logo";
 import {
   budgetProgressRowSchema,
   monthlyReportSchema,
@@ -53,6 +54,8 @@ type CategoryRow = {
   parent_id: string | null;
   icon: string | null;
   color: string | null;
+  logo: unknown;
+  logo_checked_at: string | null;
   sort_order: number;
   archived_at: string | null;
 };
@@ -139,7 +142,7 @@ export const categoriesQuery = () =>
     queryFn: async (): Promise<Category[]> => {
       const { data, error } = await createClient()
         .from("categories")
-        .select("id, name, kind, parent_id, icon, color, sort_order, archived_at")
+        .select("id, name, kind, parent_id, icon, color, logo, logo_checked_at, sort_order, archived_at")
         .order("sort_order")
         .order("name");
       if (error) fail(error);
@@ -150,6 +153,8 @@ export const categoriesQuery = () =>
         parentId: c.parent_id,
         icon: c.icon,
         color: c.color,
+        logo: parseLogo(c.logo),
+        logoChecked: c.logo_checked_at !== null,
         sortOrder: c.sort_order,
         archivedAt: c.archived_at,
       }));
@@ -255,6 +260,8 @@ type RecurringRow = {
   end_date: string | null;
   auto_post: boolean;
   paused_at: string | null;
+  logo: unknown;
+  logo_checked_at: string | null;
 };
 
 // Every recurring rule, soonest due first.
@@ -265,7 +272,7 @@ export const recurringQuery = () =>
       const { data, error } = await createClient()
         .from("recurring_rules")
         .select(
-          "id, kind, name, amount, currency, account_id, category_id, frequency, repeat_every, anchor_day, next_due, end_date, auto_post, paused_at",
+          "id, kind, name, amount, currency, account_id, category_id, frequency, repeat_every, anchor_day, next_due, end_date, auto_post, paused_at, logo, logo_checked_at",
         )
         .order("next_due")
         .order("name");
@@ -285,6 +292,8 @@ export const recurringQuery = () =>
         endDate: r.end_date,
         autoPost: r.auto_post,
         paused: r.paused_at !== null,
+        logo: parseLogo(r.logo),
+        logoChecked: r.logo_checked_at !== null,
       }));
     },
   });
