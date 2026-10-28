@@ -40,6 +40,24 @@ const MESSAGES: Record<string, string> = {
 
 const never = () => () => undefined;
 
+/**
+ * Turns the recognizer's results into one line of text. Desktop browsers give each
+ * phrase once, but Android Chrome often gives every result as the whole sentence so
+ * far ("hello", "hello how", "hello how has"), so a result that continues the one
+ * before it replaces it instead of being added after it.
+ */
+export function transcriptOf(results: ArrayLike<{ 0: { transcript: string } }>): string {
+  const parts: string[] = [];
+  for (let i = 0; i < results.length; i++) {
+    const text = results[i][0].transcript.trim();
+    if (!text) continue;
+    const last = parts.length - 1;
+    if (last >= 0 && text.toLowerCase().startsWith(parts[last].toLowerCase())) parts[last] = text;
+    else parts.push(text);
+  }
+  return parts.join(" ");
+}
+
 export function useDictation() {
   const supported = useSyncExternalStore(
     never,
@@ -65,9 +83,7 @@ export function useDictation() {
     const lead = base.trim();
 
     recognition.onresult = (event) => {
-      let said = "";
-      for (let i = 0; i < event.results.length; i++) said += event.results[i][0].transcript;
-      said = said.trim();
+      const said = transcriptOf(event.results);
       onText(lead && said ? `${lead} ${said}` : lead || said);
     };
     recognition.onerror = (event) => {
